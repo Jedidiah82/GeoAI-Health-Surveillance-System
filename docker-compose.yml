@@ -1,0 +1,21 @@
+services:
+  dashboard:
+    build: .
+    container_name: geoai_dashboard
+    ports:
+      - "8501:8501"
+    command: streamlit run app/dashboard.py --server.address=0.0.0.0 --server.port=8501
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./figures:/app/figures
+
+  api:
+    build: .
+    container_name: geoai_api_gateway
+    ports:
+      - "8000:8000"
+    command: uvicorn app.api:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data

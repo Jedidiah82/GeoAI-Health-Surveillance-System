@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs and runtime outputs
+logs/*.csv
+data/refresh_backups/
+
+# Environment/secrets
+.env
+*.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker/temporary
+*.log
