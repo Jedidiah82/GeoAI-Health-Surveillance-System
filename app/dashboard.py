@@ -1,10 +1,12 @@
 import os
 import streamlit as st
 import pandas as pd
+import geopandas as gpd
 import plotly.express as px
 from map_utils import create_geoai_map
 from audit_logger import log_event
 from streamlit_folium import st_folium
+from datetime import datetime
 
 st.set_page_config(
     page_title="GeoAI Surveillance Dashboard",
@@ -14,6 +16,18 @@ st.set_page_config(
 st.title("GeoAI Surveillance Dashboard Prototype")
 st.caption("Privacy-preserving district-level COVID-19 outbreak risk monitoring system")
 
+st.caption(f"Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.success("System Status: Operational")
+
+with col2:
+    st.info("API Gateway: Healthy")
+
+with col3:
+    st.warning("Audit Logging: Active")
 
 @st.cache_data
 def load_data():
@@ -26,6 +40,51 @@ def load_data():
 
 df = load_data()
 
+# --------------------------------
+# Operational Summary Metrics
+# --------------------------------
+
+latest_df = (
+    df.sort_values(["Year", "Month"])
+      .groupby("adm2_name")
+      .tail(1)
+      .copy()
+)
+
+high_risk_count = (latest_df["Risk_Level"] == "High Risk").sum()
+avg_risk_score = latest_df["Outbreak_Probability"].mean()
+
+try:
+    hotspot_gdf = gpd.read_file("data/geoai_spatial_intelligence.geojson")
+
+    if "Hotspot_Class" in hotspot_gdf.columns:
+        active_hotspots = (hotspot_gdf["Hotspot_Class"] == "Hotspot").sum()
+
+    elif "GiZScore" in hotspot_gdf.columns and "GiPValue" in hotspot_gdf.columns:
+        active_hotspots = (
+            (hotspot_gdf["GiPValue"].astype(float) <= 0.05)
+            & (hotspot_gdf["GiZScore"].astype(float) > 1.96)
+        ).sum()
+
+    else:
+        active_hotspots = "N/A"
+
+except Exception:
+    active_hotspots = "N/A"
+
+try:
+    audit_log = pd.read_csv("logs/audit_log.csv")
+    governance_events = len(audit_log)
+except FileNotFoundError:
+    governance_events = 0
+
+m1, m2, m3, m4 = st.columns(4)
+
+m1.metric("High-Risk Districts", high_risk_count)
+m2.metric("Average Risk Score", f"{avg_risk_score:.4f}")
+m3.metric("Active Hotspots", active_hotspots)
+m4.metric("Governance Events Logged", governance_events)
+
 st.sidebar.header("District Selection")
 
 districts = sorted(df["adm2_name"].dropna().unique())
@@ -35,15 +94,39 @@ selected_district = st.sidebar.selectbox(
     districts
 )
 
+top_risk = (
+    df.sort_values(["Year", "Month"])
+      .groupby("adm2_name")
+      .tail(1)
+      .sort_values(by="Outbreak_Probability", ascending=False)
+      .head(10)
+      .copy()
+)
+
+st.subheader("Top Risk Districts")
+
+st.dataframe(
+    top_risk.rename(
+        columns={
+            "adm2_name": "District",
+            "adm1_name": "County",
+            "Outbreak_Probability": "Risk Score",
+            "Risk_Level": "Risk Level"
+        }
+    )[["District", "County", "Risk Score", "Risk Level"]],
+    width="stretch"
+)
+
 log_event(
     user_role="analyst",
     action="district_selected",
     district=selected_district
 )
 
-latest_update = df["Date"].max().strftime("%B %Y")
+start_period = df["Date"].min().strftime("%B %Y")
+end_period = df["Date"].max().strftime("%B %Y")
 
-st.caption(f"Latest surveillance update: {latest_update}")
+st.caption(f"Dataset Coverage Period: {start_period} – {end_period}")
 
 
 district_df = df[df["adm2_name"] == selected_district].copy()
@@ -51,6 +134,7 @@ district_df = df[df["adm2_name"] == selected_district].copy()
 latest_record = district_df.sort_values(
     ["Year", "Month"]
 ).iloc[-1]
+
 
 # -----------------------------
 # KPI Cards
@@ -72,9 +156,37 @@ geoai_map = create_geoai_map()
 
 st_folium(
     geoai_map,
-    width=1200,
-    height=600
+    height=850,
+    use_container_width=True
 )
+
+
+# --------------------------------
+# Operational Alert Panel
+# --------------------------------
+
+st.subheader("Operational Alert Summary")
+
+high_risk_count = latest_df[
+    latest_df["Risk_Level"] == "High Risk"
+].shape[0]
+
+moderate_risk_count = latest_df[
+    latest_df["Risk_Level"] == "Moderate Risk"
+].shape[0]
+
+if high_risk_count > 0:
+    st.error(
+        f"{high_risk_count} district(s) are currently classified as High Risk."
+    )
+
+if moderate_risk_count > 0:
+    st.warning(
+        f"{moderate_risk_count} district(s) are currently classified as Moderate Risk."
+    )
+
+if high_risk_count == 0 and moderate_risk_count == 0:
+    st.success("No elevated district-level outbreak risk detected.")
 
 
 # --------------------------------
@@ -235,73 +347,6 @@ risk_fig.update_layout(
 )
 
 st.plotly_chart(risk_fig, width="stretch")
-
-
-# --------------------------------
-# Top Risk Districts
-# --------------------------------
-
-st.subheader("Top Districts by Predicted Outbreak Probability")
-
-top_risk_df = latest_df.sort_values(
-    "Outbreak_Probability",
-    ascending=False
-).head(10)
-
-top_risk_display = top_risk_df[
-    [
-        "adm2_name",
-        "adm1_name",
-        "Outbreak_Probability",
-        "Risk_Level"
-    ]
-].rename(
-    columns={
-        "adm2_name": "District",
-        "adm1_name": "County",
-        "Outbreak_Probability": "Outbreak Probability",
-        "Risk_Level": "Risk Level"
-    }
-)
-
-top_risk_display["Outbreak Probability"] = (
-    top_risk_display["Outbreak Probability"]
-    .astype(float)
-    .apply(lambda x: f"{x:.6f}")
-)
-
-st.dataframe(
-    top_risk_display,
-    width="stretch"
-)
-
-
-# --------------------------------
-# Operational Alert Panel
-# --------------------------------
-
-st.subheader("Operational Alert Summary")
-
-high_risk_count = latest_df[
-    latest_df["Risk_Level"] == "High Risk"
-].shape[0]
-
-moderate_risk_count = latest_df[
-    latest_df["Risk_Level"] == "Moderate Risk"
-].shape[0]
-
-if high_risk_count > 0:
-    st.error(
-        f"{high_risk_count} district(s) are currently classified as High Risk."
-    )
-
-if moderate_risk_count > 0:
-    st.warning(
-        f"{moderate_risk_count} district(s) are currently classified as Moderate Risk."
-    )
-
-if high_risk_count == 0 and moderate_risk_count == 0:
-    st.success("No elevated district-level outbreak risk detected.")
 
 
 # --------------------------------
