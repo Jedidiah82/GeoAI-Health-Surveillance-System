@@ -2,7 +2,9 @@ import os
 import streamlit as st
 import pandas as pd
 import geopandas as gpd
+import folium
 import plotly.express as px
+from branca.element import MacroElement, Template
 from map_utils import create_geoai_map
 from audit_logger import log_event
 from streamlit_folium import st_folium
@@ -153,6 +155,32 @@ col4.metric("Risk Level", latest_record["Risk_Level"])
 st.subheader("Operational GeoAI Spatial Intelligence Map")
 
 geoai_map = create_geoai_map()
+
+legend_template = """
+{% macro html(this, kwargs) %}
+<div style="
+    position: absolute;
+    bottom: 40px;
+    left: 40px;
+    width: 190px;
+    background-color: white;
+    border: 2px solid grey;
+    z-index: 9999;
+    font-size: 14px;
+    padding: 10px;
+    border-radius: 5px;
+">
+<b>Risk Level Legend</b><br>
+<span style="background:#66c2a5;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Low Risk<br>
+<span style="background:#f6c85f;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Moderate Risk<br>
+<span style="background:#d73027;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>High Risk
+</div>
+{% endmacro %}
+"""
+
+legend = MacroElement()
+legend._template = Template(legend_template)
+geoai_map.get_root().add_child(legend)
 
 st_folium(
     geoai_map,
