@@ -305,6 +305,7 @@ map_files = {
     "Rainfall Distribution": "figures/maps/Rainfall Distribution Map.png",
     "Reported COVID-19 Cases": "figures/maps/COVID-19 Case Count Map.png",
     "Cumulative COVID-19 Incidence": "figures/maps/Cumulative Incidence Map.png",
+    "Population Density (2022)": "figures/maps/population_density_2022.png",
 }
 
 available_maps = {
