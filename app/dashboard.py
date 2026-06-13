@@ -82,7 +82,7 @@ except FileNotFoundError:
 
 m1, m2, m3, m4 = st.columns(4)
 
-m1.metric("High-Risk Districts", high_risk_count)
+m1.metric("Top Risk Districts", high_risk_count)
 m2.metric("Average Risk Score", f"{avg_risk_score:.4f}")
 m3.metric("Active Hotspots", active_hotspots)
 m4.metric("Governance Events Logged", governance_events)
@@ -205,12 +205,12 @@ moderate_risk_count = latest_df[
 
 if high_risk_count > 0:
     st.error(
-        f"{high_risk_count} district(s) are currently classified as High Risk."
+        f"{high_risk_count} district(s) are currently ranked within the highest outbreak-probability group."
     )
 
 if moderate_risk_count > 0:
     st.warning(
-        f"{moderate_risk_count} district(s) are currently classified as Moderate Risk."
+        f"{moderate_risk_count} district(s) are currently flagged for enhanced surveillance monitoring."
     )
 
 if high_risk_count == 0 and moderate_risk_count == 0:
