@@ -217,7 +217,7 @@ if high_risk_count == 0 and moderate_risk_count == 0:
     st.success("No elevated district-level outbreak risk detected.")
 
 st.info(
-    "The Top Districts table provides a ranking based on predicted outbreak probability and should not be interpreted as equivalent to the High-, Moderate-, and Low-Risk classifications displayed on the GeoAI risk-classification map."
+    "The Top Risk Districts table provides a ranking based on predicted outbreak probability and should not be interpreted as equivalent to the High-, Moderate-, and Low-Risk classifications displayed on the GeoAI risk-classification map."
 )
 
 
