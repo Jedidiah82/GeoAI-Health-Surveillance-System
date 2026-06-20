@@ -113,25 +113,52 @@ with m4:
 st.sidebar.header("District Selection")
 
 st.sidebar.markdown("""
+
 ### Dashboard Navigation
 
 Use this dashboard to explore:
 
-- District-level outbreak-risk information
-- Spatial hotspot intelligence
-- Explainable AI insights
-- Model performance summaries
-- Environmental and epidemiological trends
-- Governance and privacy controls
+* District-level outbreak-risk information
+* Spatial hotspot intelligence
+* Explainable AI insights
+* Model performance summaries
+* Environmental and epidemiological trends
+* Governance and privacy controls
 
-Select a district below to update all charts, indicators, and maps.
+Select a county and district below to update all charts, indicators, and maps.
 """)
 
-districts = sorted(df["adm2_name"].dropna().unique())
+# --------------------------------
+
+# County Selection
+
+# --------------------------------
+
+counties = sorted(df["adm1_name"].dropna().unique())
+
+selected_county = st.sidebar.selectbox(
+"Select County",
+counties
+)
+
+# --------------------------------
+
+# District Selection (filtered by county)
+
+# --------------------------------
+
+county_districts = sorted(
+df.loc[
+df["adm1_name"] == selected_county,
+"adm2_name"
+]
+.dropna()
+.unique()
+)
 
 selected_district = st.sidebar.selectbox(
-    "Select District",
-    districts
+"Select District",
+county_districts
 )
 
 top_risk = (
