@@ -330,19 +330,19 @@ if len(latest_two) == 2:
     else:
         trend_status = "Stable"
 
-    col1, col2 = st.columns(2)
+    trend_col1, trend_col2 = st.columns(2)
 
-with col1:
-    st.metric(
-        "Current Outbreak Probability",
-        f"{latest_record['Outbreak_Probability']*100:.2f}%"
-    )
+    with trend_col1:
+        st.metric(
+            "Current Outbreak Probability",
+            f"{latest_record['Outbreak_Probability']*100:.2f}%"
+        )
 
-with col2:
-    st.metric(
-        "Trend Direction",
-        trend_status
-    )
+    with trend_col2:
+        st.metric(
+            "Trend Direction",
+            trend_status
+        )
 
 # -----------------------------
 # Trend chart
