@@ -240,11 +240,12 @@ col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("District", latest_record["adm2_name"])
 col2.metric("County", latest_record["adm1_name"])
-col3.metric("Outbreak Probability", round(latest_record["Outbreak_Probability"], 4))
+col3.metric("Outbreak Probability", f"{latest_record['Outbreak_Probability'] * 100:.2f}%")
 col4.metric("Risk Level", latest_record["Risk_Level"])
 
 
 with st.expander("How are risk levels interpreted?"):
+
     st.markdown("""
     The dashboard presents GeoAI risk outputs in three complementary ways:
 
@@ -252,7 +253,23 @@ with st.expander("How are risk levels interpreted?"):
     - **Surveillance Risk Level:** categorical classification as Low, Moderate, or High Risk.
     - **Top Risk Districts:** an operational ranking of districts with the highest current predicted probabilities.
 
-    The Top Risk Districts table is used for surveillance prioritisation and should not be interpreted as identical to the High-, Moderate-, and Low-Risk categories on the risk-classification map.
+    The Top Risk Districts table supports surveillance prioritisation and should not be interpreted as identical to the High-, Moderate-, and Low-Risk categories shown on the GeoAI risk-classification map.
+
+    ### Operational Interpretation
+
+    **High Risk**
+    - Immediate surveillance attention recommended.
+    - Review outbreak indicators and hotspot intelligence.
+    - Consider escalation and resource mobilisation where appropriate.
+
+    **Moderate Risk**
+    - Enhanced monitoring recommended.
+    - Review trend direction and recent surveillance indicators.
+    - Prepare escalation if risk increases.
+
+    **Low Risk**
+    - Routine surveillance recommended.
+    - Continue periodic monitoring and review.
     """)
 
 # --------------------------------
@@ -292,6 +309,102 @@ else:
     - Maintain periodic monitoring.
     - Review trends if new cases or hotspot signals emerge.
     """)
+
+st.caption(
+    f"Current classification based on GeoAI prediction: "
+    f"{latest_record['Risk_Level']} "
+    f"(Predicted outbreak probability = "
+    f"{latest_record['Outbreak_Probability']*100:.2f}%)."
+)
+
+latest_two = district_df.sort_values("Date").tail(2)
+
+if len(latest_two) == 2:
+    previous = latest_two.iloc[0]["Outbreak_Probability"]
+    current = latest_two.iloc[1]["Outbreak_Probability"]
+
+    if current > previous * 1.05:
+        trend_status = "Increasing"
+    elif current < previous * 0.95:
+        trend_status = "Decreasing"
+    else:
+        trend_status = "Stable"
+
+    col1, col2 = st.columns(2)
+
+with col1:
+    st.metric(
+        "Current Outbreak Probability",
+        f"{latest_record['Outbreak_Probability']*100:.2f}%"
+    )
+
+with col2:
+    st.metric(
+        "Trend Direction",
+        trend_status
+    )
+
+# -----------------------------
+# Trend chart
+# -----------------------------
+st.subheader("Temporal Outbreak Probability Trend")
+
+with st.expander("About this trend chart"):
+    st.markdown("""
+    This chart shows how predicted outbreak probability changes over time
+    for the selected district, supporting trend monitoring and early warning.
+    """)
+
+trend_fig = px.line(
+    district_df.sort_values("Date"),
+    x="Date",
+    y="Outbreak_Probability",
+    markers=True,
+    title=f"Outbreak Probability Trend: {selected_district}"
+)
+
+trend_fig.update_layout(
+    xaxis_title="Date",
+    yaxis_title="Predicted Outbreak Probability"
+)
+
+st.plotly_chart(trend_fig, width="stretch")
+
+# --------------------------------
+# Operational Alert Panel
+# --------------------------------
+
+st.subheader("Operational Alert Summary")
+
+st.markdown("""
+This section highlights districts currently exhibiting elevated outbreak risk.
+The alerts support prioritisation of surveillance activities and resource allocation.
+""")
+
+high_risk_count = latest_df[
+    latest_df["Risk_Level"] == "High Risk"
+].shape[0]
+
+moderate_risk_count = latest_df[
+    latest_df["Risk_Level"] == "Moderate Risk"
+].shape[0]
+
+if high_risk_count > 0:
+    st.error(
+        f"{high_risk_count} district(s) are currently ranked within the highest outbreak-probability group."
+    )
+
+if moderate_risk_count > 0:
+    st.warning(
+        f"{moderate_risk_count} district(s) are currently flagged for enhanced surveillance monitoring."
+    )
+
+if high_risk_count == 0 and moderate_risk_count == 0:
+    st.success("No elevated district-level outbreak risk detected.")
+
+st.info(
+    "The Top Risk Districts table provides a ranking based on predicted outbreak probability and should not be interpreted as equivalent to the High-, Moderate-, and Low-Risk classifications displayed on the GeoAI risk-classification map."
+)
 
 
 # --------------------------------
@@ -341,240 +454,6 @@ st_folium(
     height=850,
     use_container_width=True
 )
-
-
-# --------------------------------
-# Operational Alert Panel
-# --------------------------------
-
-st.subheader("Operational Alert Summary")
-
-st.markdown("""
-This section highlights districts currently exhibiting elevated outbreak risk.
-The alerts support prioritisation of surveillance activities and resource allocation.
-""")
-
-high_risk_count = latest_df[
-    latest_df["Risk_Level"] == "High Risk"
-].shape[0]
-
-moderate_risk_count = latest_df[
-    latest_df["Risk_Level"] == "Moderate Risk"
-].shape[0]
-
-if high_risk_count > 0:
-    st.error(
-        f"{high_risk_count} district(s) are currently ranked within the highest outbreak-probability group."
-    )
-
-if moderate_risk_count > 0:
-    st.warning(
-        f"{moderate_risk_count} district(s) are currently flagged for enhanced surveillance monitoring."
-    )
-
-if high_risk_count == 0 and moderate_risk_count == 0:
-    st.success("No elevated district-level outbreak risk detected.")
-
-st.info(
-    "The Top Risk Districts table provides a ranking based on predicted outbreak probability and should not be interpreted as equivalent to the High-, Moderate-, and Low-Risk classifications displayed on the GeoAI risk-classification map."
-)
-
-
-# --------------------------------
-# Explainable GeoAI Intelligence
-# --------------------------------
-st.subheader("Explainable GeoAI Intelligence")
-
-with st.expander("About explainable GeoAI intelligence"):
-    st.markdown("""
-    This section explains why districts are classified as higher or lower outbreak risk.
-
-    The dashboard identifies the main factors influencing outbreak predictions,
-    including recent disease activity, population characteristics, and environmental conditions.
-
-    These explanations support transparency and help users understand the reasons
-    behind GeoAI-generated predictions.
-    """)
-
-col1, col2 = st.columns(2)
-
-if os.path.exists("figures/xgboost_shap_summary_plot.png"):
-    with col1:
-        st.image(
-            "figures/xgboost_shap_summary_plot.png",
-            caption="Explanation of key factors influencing outbreak-risk predictions",
-            use_container_width=True
-        )
-
-if os.path.exists("figures/xgboost_feature_importance.png"):
-    with col2:
-        st.image(
-            "figures/xgboost_feature_importance.png",
-            caption="Key Drivers of Outbreak Risk",
-            use_container_width=True
-        )
-
-st.info("""
-Interpretation: The dashboard identifies the main factors associated with predicted outbreak risk.
-Recent case trends, population density, rainfall, and temperature help explain why some districts
-are classified as higher or lower risk.
-""")
-
-
-# --------------------------------
-# Model Confidence and Validation
-# --------------------------------
-st.subheader("Model Confidence and Validation")
-
-model_results = pd.read_csv("data/final_geoai_model_comparison.csv")
-
-model_results_display = model_results.rename(
-    columns={
-        "ROC_AUC": "Overall Prediction Performance (ROC-AUC)",
-        "Precision": "Accuracy of High-Risk Alerts (Precision)",
-        "Recall": "Ability to Detect Outbreaks (Recall)",
-        "F1_Score": "Overall Detection Balance (F1-Score)"
-    }
-)
-
-with st.expander("About model confidence and validation"):
-    st.markdown("""
-    This section presents the performance of the evaluated prediction models.
-
-    The results demonstrate how accurately the GeoAI framework identifies
-    districts at elevated outbreak risk and provide evidence supporting
-    the reliability of the surveillance system.
-    """)
-
-st.dataframe(
-    model_results_display,
-    use_container_width=True
-)
-
-best_model = model_results.sort_values(
-    by=["ROC_AUC", "F1_Score"],
-    ascending=False
-).iloc[0]
-
-st.success(
-    f"Best performing model: {best_model['Model']} "
-    f"with strong overall prediction performance and balanced outbreak-detection capability."
-)
-
-st.caption("""
-Metric guide: Overall Prediction Performance shows how well the model separates higher-risk
-from lower-risk districts. Accuracy of High-Risk Alerts indicates how reliable high-risk warnings are.
-Ability to Detect Outbreaks shows how well the model identifies outbreak-risk cases.
-Overall Detection Balance combines alert reliability and outbreak detection.
-""")
-
-
-# --------------------------------
-# Map and Figure Gallery
-# --------------------------------
-st.subheader("Analytical Map Outputs")
-
-with st.expander("About analytical map outputs"):
-    st.markdown("""
-    This gallery provides access to spatial and epidemiological maps generated
-    during analysis. The maps support interpretation of disease patterns,
-    environmental conditions, hotspot activity, and GeoAI predictions.
-    """)
-
-map_files = {
-    "Study Area / Administrative Reference Map": "figures/maps/Study Area - Administrative Reference Map.png",
-    "GeoAI-Predicted Outbreak Probability": "figures/maps/GeoAI Outbreak Probability Map.png",
-    "GeoAI-Based Risk Classification": "figures/maps/GeoAI Risk Classification Map.png",
-    "GeoAI-Derived Spatial Hotspot Intelligence": "figures/maps/GEOAI HOTSPOT MAP.png",
-    "Local Moran's I Cluster Analysis": "figures/maps/Local Moran’s I Cluster_Outlier Map.png",
-    "Traditional Getis-Ord Gi* Hotspot Analysis": "figures/maps/Traditional Hotspot Analysis Map (Getis-Ord Gi).png",
-    "Temperature Distribution": "figures/maps/Temperature Distribution Map.png",
-    "Rainfall Distribution": "figures/maps/Rainfall Distribution Map.png",
-    "Reported COVID-19 Cases": "figures/maps/COVID-19 Case Count Map.png",
-    "Cumulative COVID-19 Incidence": "figures/maps/Cumulative Incidence Map.png",
-    "Population Density (2022)": "figures/maps/population_density_2022.png",
-}
-
-available_maps = {
-    name: path for name, path in map_files.items()
-    if os.path.exists(path)
-}
-
-if available_maps:
-    selected_map = st.selectbox(
-        "Select analytical map output",
-        list(available_maps.keys())
-    )
-
-    st.image(
-        available_maps[selected_map],
-        caption=selected_map,
-        use_container_width=True
-    )
-else:
-    st.warning("No map images found. Check the file names inside figures/maps.")
-
-
-# -----------------------------
-# Trend chart
-# -----------------------------
-st.subheader("Temporal Outbreak Probability Trend")
-
-with st.expander("About this trend chart"):
-    st.markdown("""
-    This chart shows how predicted outbreak probability changes over time
-    for the selected district, supporting trend monitoring and early warning.
-    """)
-
-trend_fig = px.line(
-    district_df.sort_values("Date"),
-    x="Date",
-    y="Outbreak_Probability",
-    markers=True,
-    title=f"Outbreak Probability Trend: {selected_district}"
-)
-
-trend_fig.update_layout(
-    xaxis_title="Date",
-    yaxis_title="Predicted Outbreak Probability"
-)
-
-st.plotly_chart(trend_fig, width="stretch")
-
-
-# -----------------------------
-# Risk Level Distribution
-# -----------------------------
-st.subheader("Risk Level Distribution")
-
-with st.expander("About risk level distribution"):
-    st.markdown("""
-    This summary displays the current distribution of district outbreak-risk
-    classifications across Liberia.
-    """)
-
-latest_df = (
-    df.sort_values(["Year", "Month"])
-      .groupby("adm2_name")
-      .tail(1)
-)
-
-risk_counts = latest_df["Risk_Level"].value_counts().reset_index()
-risk_counts.columns = ["Risk Level", "District Count"]
-
-risk_fig = px.bar(
-    risk_counts,
-    x="Risk Level",
-    y="District Count",
-    title="Latest District Risk Classification Summary"
-)
-
-risk_fig.update_layout(
-    xaxis_title="Risk Level",
-    yaxis_title="Number of Districts"
-)
-
-st.plotly_chart(risk_fig, width="stretch")
 
 
 # --------------------------------
@@ -709,6 +588,182 @@ with tab3:
     )
 
     st.plotly_chart(norm_fig, width="stretch")
+
+
+# --------------------------------
+# Explainable GeoAI Intelligence
+# --------------------------------
+st.subheader("Explainable GeoAI Intelligence")
+
+with st.expander("About explainable GeoAI intelligence"):
+    st.markdown("""
+    This section explains why districts are classified as higher or lower outbreak risk.
+
+    The dashboard identifies the main factors influencing outbreak predictions,
+    including recent disease activity, population characteristics, and environmental conditions.
+
+    These explanations support transparency and help users understand the reasons
+    behind GeoAI-generated predictions.
+    """)
+
+col1, col2 = st.columns(2)
+
+if os.path.exists("figures/xgboost_shap_summary_plot.png"):
+    with col1:
+        st.image(
+            "figures/xgboost_shap_summary_plot.png",
+            caption="Explanation of key factors influencing outbreak-risk predictions",
+            use_container_width=True
+        )
+
+if os.path.exists("figures/xgboost_feature_importance.png"):
+    with col2:
+        st.image(
+            "figures/xgboost_feature_importance.png",
+            caption="Key Drivers of Outbreak Risk",
+            use_container_width=True
+        )
+
+st.info("""
+Interpretation: The dashboard identifies the main factors associated with predicted outbreak risk.
+Recent case trends, population density, rainfall, and temperature help explain why some districts
+are classified as higher or lower risk.
+""")
+
+
+# --------------------------------
+# Model Confidence and Validation
+# --------------------------------
+st.subheader("Model Confidence and Validation")
+
+model_results = pd.read_csv("data/final_geoai_model_comparison.csv")
+
+model_results_display = model_results.rename(
+    columns={
+        "ROC_AUC": "Overall Prediction Performance (ROC-AUC)",
+        "Precision": "Accuracy of High-Risk Alerts (Precision)",
+        "Recall": "Ability to Detect Outbreaks (Recall)",
+        "F1_Score": "Overall Detection Balance (F1-Score)"
+    }
+)
+
+with st.expander("About model confidence and validation"):
+    st.markdown("""
+    This section presents the performance of the evaluated prediction models.
+
+    The results demonstrate how accurately the GeoAI framework identifies
+    districts at elevated outbreak risk and provide evidence supporting
+    the reliability of the surveillance system.
+    """)
+
+st.dataframe(
+    model_results_display,
+    use_container_width=True
+)
+
+best_model = model_results.sort_values(
+    by=["ROC_AUC", "F1_Score"],
+    ascending=False
+).iloc[0]
+
+st.success(
+    f"Best performing model: {best_model['Model']} "
+    f"with strong overall prediction performance and balanced outbreak-detection capability."
+)
+
+st.caption("""
+Metric guide: Overall Prediction Performance shows how well the model separates higher-risk
+from lower-risk districts. Accuracy of High-Risk Alerts indicates how reliable high-risk warnings are.
+Ability to Detect Outbreaks shows how well the model identifies outbreak-risk cases.
+Overall Detection Balance combines alert reliability and outbreak detection.
+""")
+
+st.caption("""
+Note: Model confidence is represented through validation metrics such as ROC-AUC,
+Precision, Recall, and F1-Score. A district-level uncertainty or confidence interval
+was not estimated in this prototype and is recommended for future enhancement.
+""")
+
+
+# -----------------------------
+# Risk Level Distribution
+# -----------------------------
+st.subheader("Risk Level Distribution")
+
+with st.expander("About risk level distribution"):
+    st.markdown("""
+    This summary displays the current distribution of district outbreak-risk
+    classifications across Liberia.
+    """)
+
+latest_df = (
+    df.sort_values(["Year", "Month"])
+      .groupby("adm2_name")
+      .tail(1)
+)
+
+risk_counts = latest_df["Risk_Level"].value_counts().reset_index()
+risk_counts.columns = ["Risk Level", "District Count"]
+
+risk_fig = px.bar(
+    risk_counts,
+    x="Risk Level",
+    y="District Count",
+    title="Latest District Risk Classification Summary"
+)
+
+risk_fig.update_layout(
+    xaxis_title="Risk Level",
+    yaxis_title="Number of Districts"
+)
+
+st.plotly_chart(risk_fig, width="stretch")
+
+
+# --------------------------------
+# Map and Figure Gallery
+# --------------------------------
+st.subheader("Analytical Map Outputs")
+
+with st.expander("About analytical map outputs"):
+    st.markdown("""
+    This gallery provides access to spatial and epidemiological maps generated
+    during analysis. The maps support interpretation of disease patterns,
+    environmental conditions, hotspot activity, and GeoAI predictions.
+    """)
+
+map_files = {
+    "Study Area / Administrative Reference Map": "figures/maps/Study Area - Administrative Reference Map.png",
+    "GeoAI-Predicted Outbreak Probability": "figures/maps/GeoAI Outbreak Probability Map.png",
+    "GeoAI-Based Risk Classification": "figures/maps/GeoAI Risk Classification Map.png",
+    "GeoAI-Derived Spatial Hotspot Intelligence": "figures/maps/GEOAI HOTSPOT MAP.png",
+    "Local Moran's I Cluster Analysis": "figures/maps/Local Moran’s I Cluster_Outlier Map.png",
+    "Traditional Getis-Ord Gi* Hotspot Analysis": "figures/maps/Traditional Hotspot Analysis Map (Getis-Ord Gi).png",
+    "Temperature Distribution": "figures/maps/Temperature Distribution Map.png",
+    "Rainfall Distribution": "figures/maps/Rainfall Distribution Map.png",
+    "Reported COVID-19 Cases": "figures/maps/COVID-19 Case Count Map.png",
+    "Cumulative COVID-19 Incidence": "figures/maps/Cumulative Incidence Map.png",
+    "Population Density (2022)": "figures/maps/population_density_2022.png",
+}
+
+available_maps = {
+    name: path for name, path in map_files.items()
+    if os.path.exists(path)
+}
+
+if available_maps:
+    selected_map = st.selectbox(
+        "Select analytical map output",
+        list(available_maps.keys())
+    )
+
+    st.image(
+        available_maps[selected_map],
+        caption=selected_map,
+        use_container_width=True
+    )
+else:
+    st.warning("No map images found. Check the file names inside figures/maps.")
 
 
 # --------------------------------
