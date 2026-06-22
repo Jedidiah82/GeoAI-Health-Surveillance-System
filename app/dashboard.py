@@ -246,29 +246,38 @@ col4.metric("Risk Level", latest_record["Risk_Level"])
 
 with st.expander("How are risk levels interpreted?"):
 
-```
-st.markdown("""
+    st.markdown("""
+### GeoAI Risk Outputs
+
 The dashboard presents GeoAI risk outputs in three complementary ways:
 
-- **Predicted Outbreak Probability:** a model-generated probability ranging from 0 to 1, where higher values indicate greater predicted outbreak risk.
-- **Surveillance Risk Level:** districts are grouped into Low-, Moderate-, and High-Risk categories using quantile-based classification of the predicted outbreak probabilities. These categories represent relative levels of predicted risk across districts rather than fixed epidemiological thresholds.
-- **Top Risk Districts:** an operational ranking of districts with the highest current predicted outbreak probabilities.
+- **Predicted Outbreak Probability**
+  - A model-generated probability ranging from 0 to 1.
+  - Higher values indicate greater predicted outbreak risk.
 
-The Top Risk Districts table supports surveillance prioritisation and should not be interpreted as identical to the Low-, Moderate-, and High-Risk categories shown on the GeoAI risk-classification map.
+- **Surveillance Risk Level**
+  - Districts are grouped into **Low**, **Moderate**, and **High Risk** categories using quantile-based classification of the predicted outbreak probabilities.
+  - These categories represent relative levels of predicted risk across districts rather than fixed epidemiological thresholds.
+
+- **Top Risk Districts**
+  - An operational ranking of districts with the highest current predicted outbreak probabilities.
+  - This ranking supports surveillance prioritisation and resource allocation.
+
+**Important:** The Top Risk Districts table should not be interpreted as identical to the Low-, Moderate-, and High-Risk categories shown on the GeoAI risk-classification map.
 
 ### Operational Interpretation
 
-**High Risk**
+#### High Risk
 - Immediate surveillance attention recommended.
 - Review outbreak indicators and hotspot intelligence.
 - Consider escalation and resource mobilisation where appropriate.
 
-**Moderate Risk**
+#### Moderate Risk
 - Enhanced monitoring recommended.
 - Review trend direction and recent surveillance indicators.
 - Prepare escalation if risk increases.
 
-**Low Risk**
+#### Low Risk
 - Routine surveillance recommended.
 - Continue periodic monitoring and review.
 """)
