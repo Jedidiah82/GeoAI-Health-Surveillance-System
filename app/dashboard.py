@@ -258,12 +258,19 @@ The dashboard presents GeoAI risk outputs in three complementary ways:
 - **Surveillance Risk Level**
   - Districts are grouped into **Low**, **Moderate**, and **High Risk** categories using quantile-based classification of the predicted outbreak probabilities.
   - These categories represent relative levels of predicted risk across districts rather than fixed epidemiological thresholds.
+  - The resulting classifications are displayed on the GeoAI Risk Classification Map.
 
 - **Top Risk Districts**
   - An operational ranking of districts with the highest current predicted outbreak probabilities.
   - This ranking supports surveillance prioritisation and resource allocation.
 
-**Important:** The Top Risk Districts table should not be interpreted as identical to the Low-, Moderate-, and High-Risk categories shown on the GeoAI risk-classification map.
+### Understanding the Difference
+
+The **GeoAI Risk Classification Map** groups all districts into Low-, Moderate-, and High-Risk categories based on their relative predicted outbreak risk.
+
+The **Top Risk Districts** table ranks districts according to their current predicted outbreak probabilities and displays only the highest-ranked districts.
+
+Therefore, a district may appear in the Top Risk Districts table because it ranks among the highest current probabilities, while the GeoAI Risk Classification Map provides a broader categorisation of risk across all districts.
 
 ### Operational Interpretation
 
