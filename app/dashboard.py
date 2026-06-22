@@ -249,25 +249,30 @@ with st.expander("How are risk levels interpreted?"):
     st.markdown("""
     The dashboard presents GeoAI risk outputs in three complementary ways:
 
-    - **Predicted Outbreak Probability:** a model-generated value from 0 to 1.
-    - **Surveillance Risk Level:** categorical classification as Low, Moderate, or High Risk.
-    - **Top Risk Districts:** an operational ranking of districts with the highest current predicted probabilities.
+    - **Predicted Outbreak Probability:** a model-generated probability ranging from 0 to 1, where higher values indicate greater predicted outbreak risk.
+    - **Surveillance Risk Level:** a categorical classification (Low, Moderate, or High Risk) derived from model-generated outbreak probabilities and used to support operational interpretation.
+    - **Top Risk Districts:** an operational ranking of districts with the highest current predicted outbreak probabilities.
 
-    The Top Risk Districts table supports surveillance prioritisation and should not be interpreted as identical to the High-, Moderate-, and Low-Risk categories shown on the GeoAI risk-classification map.
+    The **Top Risk Districts** table supports surveillance prioritisation and should not be interpreted as identical to the **High-, Moderate-, and Low-Risk** categories shown on the GeoAI risk-classification map.
+
+    Risk classifications are derived from model-generated outbreak probabilities using predefined classification rules within the GeoAI framework. Higher probabilities correspond to higher surveillance risk levels.
 
     ### Operational Interpretation
 
     **High Risk**
+    - Districts exhibiting the highest predicted outbreak risk relative to other districts.
     - Immediate surveillance attention recommended.
-    - Review outbreak indicators and hotspot intelligence.
+    - Review outbreak indicators, hotspot intelligence, and recent trends.
     - Consider escalation and resource mobilisation where appropriate.
 
     **Moderate Risk**
-    - Enhanced monitoring recommended.
+    - Districts exhibiting elevated outbreak risk requiring closer monitoring.
+    - Enhanced surveillance monitoring recommended.
     - Review trend direction and recent surveillance indicators.
     - Prepare escalation if risk increases.
 
     **Low Risk**
+    - Districts exhibiting comparatively lower predicted outbreak risk.
     - Routine surveillance recommended.
     - Continue periodic monitoring and review.
     """)
