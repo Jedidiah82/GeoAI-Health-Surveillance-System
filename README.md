@@ -208,7 +208,7 @@ The artefact was evaluated across multiple dimensions:
 
 Key evaluation findings include:
 
-- - XGBoost achieved the strongest overall balance across outbreak-risk classification metrics among the evaluated models.
+- XGBoost achieved the strongest overall balance across outbreak-risk classification metrics among the evaluated models.
 - Spatial clustering and hotspot patterns were identified using Global Moran's I, Local Moran's I, and Getis-Ord Gi* analysis.
 - SHAP explainability outputs identified plausible epidemiological, demographic, environmental, and spatial drivers of outbreak-risk predictions.
 - Governance validation demonstrated authentication, role-based access control, protected API access, secure API mediation, and audit logging.
@@ -286,6 +286,14 @@ GeoAI-Health-Surveillance-System/
 |   |-- lbr_admin2.geojson
 |
 |-- figures/
+|   |-- system_architecture.png
+|   |-- dashboard_main.png
+|   |-- outbreak_probability_map.png
+|   |-- risk_map.png
+|   |-- hotspot_intelligence.png
+|   |-- shap_panel.png
+|   |-- governance_panel.png
+|   |-- api_gateway.png
 |   |-- maps/
 |   |-- shap/
 |
@@ -550,7 +558,7 @@ https://github.com/Jedidiah82
 
 ---
 
-## License
+## License and Academic Use
 
 This repository is intended for academic research, demonstration, and educational purposes.
 
