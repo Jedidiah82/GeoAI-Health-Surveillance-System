@@ -1,152 +1,408 @@
 # GeoAI Health Surveillance System
 
-Privacy-preserving operational GeoAI surveillance platform integrating geospatial intelligence, explainable artificial intelligence (XAI), secure API mediation, and governance-aware hybrid cloud architecture for district-level outbreak risk monitoring.
+Privacy-preserving GeoAI health surveillance prototype integrating geospatial intelligence, machine learning, explainable artificial intelligence, secure API mediation, dashboard-based decision support, and governance-aware hybrid cloud architecture for district-level outbreak-risk monitoring.
 
 ---
 
-# Overview
+## Dissertation Information
 
-This project presents an operational GeoAI surveillance prototype designed to support district-level epidemiological monitoring and spatial intelligence using:
+**Title:**  
+Design and Evaluation of a Privacy-Preserving GeoAI Health Surveillance System Using a Hybrid Cloud Architecture
 
-- GeoAI prediction models
-- Spatial hotspot analysis
-- Explainable AI (SHAP)
-- Interactive GIS dashboards
+**Programme:**  
+MSc Big Data Technologies
+
+**Institution:**  
+University of East London (UEL) / UNICAF
+
+**Year:**  
+2026
+
+**Author:**  
+Godwin Etim Akpan
+
+**Supervisor:**  
+Dr Eya Nnabuike Nnaemeka
+
+---
+
+## Overview
+
+This repository contains the proof-of-concept artefact developed as part of an MSc dissertation on privacy-preserving GeoAI health surveillance.
+
+The system demonstrates how aggregated district-level surveillance data can be transformed into spatial intelligence, outbreak-risk classification outputs, explainable AI artefacts, governance evidence, and dashboard-based decision-support capabilities.
+
+The prototype integrates:
+
+- GeoAI outbreak-risk prediction
+- Spatial hotspot and cluster analysis
+- SHAP-based explainable AI
+- Interactive GIS dashboarding
 - Secure FastAPI gateway
 - JWT authentication
-- Role-based access control (RBAC)
+- Role-based access control
 - Audit logging
-- Dockerized deployment workflow
-
-The system was developed as part of an MSc Big Data Technologies dissertation focused on:
-
-> Design and Evaluation of a Privacy-Preserving GeoAI Health Surveillance System Using a Hybrid Cloud Architecture
+- Docker-based deployment workflow
 
 ---
 
-# Core Features
+## Live Demonstration
 
-## Operational GeoAI Dashboard
+**Dashboard:**  
+https://geoai-health-surveillance-system-bygrraq7o4uwsfokny3lhg.streamlit.app/
+
+**Secure API Documentation:**  
+http://18.217.5.170:8000/docs#/
+
+**GitHub Repository:**  
+https://github.com/Jedidiah82/GeoAI-Health-Surveillance-System
+
+> Note: The API endpoint is provided as a prototype demonstration using HTTP. A production deployment would require HTTPS enforcement, secure credential management, infrastructure hardening, monitoring, and institutional governance approval.
+
+---
+
+## Academic Disclaimer
+
+This system is a research prototype developed for academic demonstration as part of an MSc dissertation.
+
+It is not intended for clinical diagnosis, patient management, or operational public-health deployment without additional validation, infrastructure hardening, security testing, governance review, and institutional approval.
+
+No personally identifiable information is stored or exposed within the prototype. The artefact uses aggregated and de-identified district-level surveillance outputs.
+
+---
+
+## Core Features
+
+### Operational GeoAI Dashboard
+
 - Interactive Streamlit dashboard
-- District-level outbreak monitoring
+- District-level outbreak-risk monitoring
+- Outbreak probability visualisation
+- Low, Moderate, and High risk classification
+- Top Risk Districts ranking
 - KPI intelligence cards
-- Temporal outbreak trends
+- Temporal trend monitoring
 - Environmental and epidemiological indicators
 
-## Spatial Intelligence
-- Interactive Folium GIS map
-- GeoAI outbreak probability mapping
-- Risk classification visualization
+### Spatial Intelligence
+
+- Interactive Folium GIS mapping
+- GeoAI outbreak-probability mapping
+- GeoAI risk-classification mapping
 - Getis-Ord Gi* hotspot analysis
-- Local Moran’s I (LISA) cluster analysis
+- Local Moran's I cluster and outlier analysis
+- District-level spatial surveillance intelligence
 
-## Explainable GeoAI
-- SHAP explainability outputs
-- Feature importance analysis
+### Explainable GeoAI
+
+- SHAP summary plots
+- Feature-importance outputs
 - XGBoost model interpretation
-- Model confidence evaluation
+- Risk-driver explanation
+- Explainability support for transparent decision-making
 
-## Governance & Security
+### Governance and Security
+
 - JWT authentication
-- RBAC-style access control
-- Secure FastAPI API gateway
+- Role-based access control
+- Secure FastAPI gateway
+- Protected API endpoints
 - Operational audit logging
-- Governance traceability
+- Governance traceability evidence
+- Aggregated district-level surveillance intelligence only
 
-## Deployment & Packaging
-- Dockerized architecture
-- docker-compose integration
-- GitHub version control
-- Cloud deployment ready
+### Deployment and Packaging
 
----
-
-# System Architecture
-
-The platform implements a governance-aware hybrid GeoAI architecture consisting of:
-
-1. Secure Data Governance Layer
-2. Secure API Mediation Layer
-3. GeoAI Analytics Layer
-4. Explainability & Decision Support Layer
-5. Operational Dashboard Interface
+- Dockerized application architecture
+- Docker Compose orchestration
+- Streamlit dashboard service
+- FastAPI secure API gateway
+- GitHub-based version control
+- Cloud-deployment demonstration support
 
 ---
 
-# Technology Stack
+## System Architecture
 
-## GIS & Spatial Analytics
+The prototype follows a governance-aware hybrid GeoAI architecture consisting of:
+
+1. Private data governance layer
+2. Secure API mediation layer
+3. GeoAI analytics layer
+4. Explainability and decision-support layer
+5. Operational dashboard interface
+6. Governance monitoring and audit logging
+
+![System Architecture](figures/system_architecture.png)
+
+---
+
+## Dashboard Preview
+
+### Main Dashboard
+
+![Main Dashboard](figures/dashboard_main.png)
+
+### GeoAI Outbreak Probability Map
+
+![GeoAI Outbreak Probability Map](figures/outbreak_probability_map.png)
+
+### GeoAI Risk Classification Map
+
+![GeoAI Risk Classification Map](figures/risk_map.png)
+
+### Hotspot Intelligence
+
+![Hotspot Intelligence](figures/hotspot_intelligence.png)
+
+### Explainability and Model Validation Interface
+
+![Explainability and Model Validation Interface](figures/shap_panel.png)
+
+### Governance Monitoring
+
+![Governance Monitoring](figures/governance_panel.png)
+
+### Secure API Gateway
+
+![Secure API Gateway](figures/api_gateway.png)
+
+---
+
+## Dataset
+
+The prototype uses aggregated district-level COVID-19 surveillance data for Liberia, combined with demographic and environmental variables.
+
+The analytical dataset includes:
+
+- Confirmed cases
+- Suspected cases
+- Recoveries
+- Mortality indicators
+- Population indicators
+- Temperature variables
+- Rainfall variables
+- Lagged epidemiological indicators
+- Spatially derived indicators
+
+All surveillance data used in the prototype were aggregated and de-identified before analysis. The system is designed to support privacy-preserving district-level surveillance intelligence rather than individual-level monitoring.
+
+---
+
+## Evaluation Summary
+
+The artefact was evaluated across multiple dimensions:
+
+- Predictive performance and outbreak-risk classification
+- Spatial intelligence and spatial validity
+- Explainability
+- Governance controls
+- API security
+- Decision-support utility
+
+Key evaluation findings include:
+
+- - XGBoost achieved the strongest overall balance across outbreak-risk classification metrics among the evaluated models.
+- Spatial clustering and hotspot patterns were identified using Global Moran's I, Local Moran's I, and Getis-Ord Gi* analysis.
+- SHAP explainability outputs identified plausible epidemiological, demographic, environmental, and spatial drivers of outbreak-risk predictions.
+- Governance validation demonstrated authentication, role-based access control, protected API access, secure API mediation, and audit logging.
+- Usability-oriented evaluation produced positive ratings across usability, explainability, governance visibility, confidence in analytical outputs, and overall usefulness.
+
+---
+
+## Technology Stack
+
+### GIS and Spatial Analytics
+
 - ArcGIS Pro
 - GeoPandas
 - Folium
 - Shapely
 - PySAL
 
-## Machine Learning & Explainability
+### Machine Learning and Explainability
+
 - Scikit-learn
 - XGBoost
 - SHAP
 - Pandas
 - NumPy
 
-## Dashboard & API
+### Dashboard and API
+
 - Streamlit
 - FastAPI
 - Uvicorn
+- Plotly
+- Streamlit-Folium
 
-## Security & Governance
-- JWT Authentication
+### Security and Governance
+
+- JWT authentication
 - OAuth2PasswordBearer
-- RBAC-style authorization
+- Role-based access control
 - Audit logging
 
-## Deployment
+### Deployment
+
 - Docker
-- docker-compose
+- Docker Compose
 - GitHub
+- Streamlit Cloud
+- AWS EC2 prototype API deployment
 
 ---
 
-# Repository Structure
+## Repository Structure
 
 ```text
-GeoAI_Surveillance_System/
-│
-├── app/
-│   ├── api.py
-│   ├── auth.py
-│   ├── dashboard.py
-│   ├── map_utils.py
-│   ├── audit_logger.py
-│   ├── refresh_simulator.py
-│   └── model_engine.py
-│
-├── data/
-│
-├── figures/
-│   ├── maps/
-│   └── shap/
-│
-├── logs/
-│
-├── models/
-│
-├── tests/
-│
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-└── README.md
+GeoAI-Health-Surveillance-System/
+|
+|-- app/
+|   |-- api.py
+|   |-- auth.py
+|   |-- dashboard.py
+|   |-- map_utils.py
+|   |-- audit_logger.py
+|   |-- refresh_simulator.py
+|   |-- data_governance.py
+|   |-- model_engine.py
+|   |-- __init__.py
+|
+|-- data/
+|   |-- covid_hotspots.geojson
+|   |-- covid_local_morans.geojson
+|   |-- district_summary.csv
+|   |-- final_geoai_model_comparison.csv
+|   |-- geoai_spatial_intelligence.geojson
+|   |-- geoai_surveillance_outputs.csv
+|   |-- lbr_admin1.geojson
+|   |-- lbr_admin2.geojson
+|
+|-- figures/
+|   |-- maps/
+|   |-- shap/
+|
+|-- models/
+|   |-- xgb_model.pkl
+|
+|-- Dockerfile
+|-- docker-compose.yml
+|-- requirements.txt
+|-- README.md
 ```
 
 ---
 
-# Running the Streamlit Dashboard
+Note: `data_governance.py` and `model_engine.py` are retained as placeholder modules for future extension of governance and model-serving functionality.
 
-## Local Execution
+---
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/Jedidiah82/GeoAI-Health-Surveillance-System.git
+cd GeoAI-Health-Surveillance-System
+```
+
+Create and activate a virtual environment:
+
+```bash
+python -m venv venv
+```
+
+On Windows:
+
+```bash
+venv\Scripts\activate
+```
+
+On macOS/Linux:
+
+```bash
+source venv/bin/activate
+```
+
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## Running the Streamlit Dashboard
 
 ```bash
 streamlit run app/dashboard.py
+```
+
+The dashboard will be available at:
+
+```text
+http://localhost:8501
+```
+
+---
+
+## Running the FastAPI Secure Gateway
+
+```bash
+uvicorn app.api:app --reload
+```
+
+The API will be available at:
+
+```text
+http://127.0.0.1:8000
+```
+
+Swagger/OpenAPI documentation will be available at:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+---
+
+## Prototype API Credentials
+
+The following credentials are provided for prototype demonstration only.
+
+### Analyst User
+
+```text
+Username: analyst
+Password: analyst123
+Role: analyst
+```
+
+### Admin User
+
+```text
+Username: admin
+Password: admin123
+Role: admin
+```
+
+These credentials are not intended for production use. Any operational deployment would require secure credential management, password hashing, HTTPS enforcement, and institutional access-control procedures.
+
+---
+
+## Docker Deployment
+
+Build the Docker image:
+
+```bash
+docker build -t geoai-surveillance-system .
+```
+
+Run the dashboard container:
+
+```bash
+docker run -p 8501:8501 geoai-surveillance-system
 ```
 
 Dashboard URL:
@@ -157,120 +413,139 @@ http://localhost:8501
 
 ---
 
-# Running the FastAPI Secure Gateway
+## Docker Compose Deployment
 
-## Local Execution
-
-```bash
-uvicorn app.api:app --reload
-```
-
-API URL:
-
-```text
-http://127.0.0.1:8000
-```
-
-Swagger/OpenAPI Documentation:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
----
-
-# Docker Deployment
-
-## Build Docker Image
-
-```bash
-docker build -t geoai-surveillance-system .
-```
-
-## Run Container
-
-```bash
-docker run -p 8501:8501 geoai-surveillance-system
-```
-
----
-
-# Docker Compose Deployment
-
-## Run Full Operational Stack
+Run the full prototype stack:
 
 ```bash
 docker-compose up --build
 ```
 
 This launches:
+
 - Streamlit operational dashboard
 - FastAPI secure gateway
 
+Dashboard URL:
+
+```text
+http://localhost:8501
+```
+
+API URL:
+
+```text
+http://localhost:8000
+```
+
+API documentation:
+
+```text
+http://localhost:8000/docs
+```
+
 ---
 
-# Security Features
+## API Endpoints
+
+The FastAPI gateway provides protected access to district-level surveillance intelligence.
+
+Common endpoints include:
+
+```text
+GET  /
+GET  /health
+POST /login
+GET  /districts
+GET  /district/{district_name}
+GET  /risk/latest
+GET  /risk/top
+GET  /admin/audit-log
+```
+
+Access to protected endpoints requires authentication. The `/admin/audit-log` endpoint requires administrator access.
+
+---
+
+## Security and Governance Features
 
 The platform demonstrates:
 
 - Secure API mediation
 - JWT-based authentication
-- Governance-aware access control
+- Role-based access control
+- Protected API endpoints
 - Operational audit logging
-- Privacy-preserving analytics
-- Aggregated district-level surveillance intelligence
+- Governance traceability
+- Privacy-preserving district-level surveillance intelligence
 
-No personally identifiable information (PII) is stored or exposed within the prototype.
+The governance mechanisms are implemented as proof-of-concept controls and are intended to demonstrate architectural feasibility rather than production security maturity.
 
 ---
 
-# Explainable AI Features
+## Explainable AI Features
 
 The system integrates SHAP explainability to:
-- identify major outbreak drivers
-- support model transparency
-- improve operational interpretability
-- enhance governance and trustworthiness
+
+- Identify major outbreak-risk drivers
+- Support model transparency
+- Improve operational interpretability
+- Strengthen trustworthiness and accountability
+- Connect predictive outputs with public-health reasoning
 
 ---
 
-# Operational Intelligence Features
+## Operational Intelligence Features
 
-The system includes:
-- outbreak probability prediction
-- district-level risk ranking
-- hotspot intelligence
-- operational alert summaries
-- environmental surveillance indicators
-- model validation outputs
+The dashboard supports:
+
+- Outbreak probability prediction
+- District-level risk classification
+- Top Risk Districts ranking
+- Hotspot intelligence
+- Operational alert summaries
+- Environmental surveillance indicators
+- Model validation outputs
+- Explainability outputs
+- Governance monitoring
 
 ---
 
-# Research Context
+## Research Context
 
 This repository supports MSc dissertation research in:
 
 - GeoAI
-- Spatial Epidemiology
-- Explainable AI (XAI)
-- Hybrid Cloud Architecture
-- Public Health Informatics
-- Governance-aware AI Systems
+- Spatial epidemiology
+- Explainable AI
+- Hybrid cloud architecture
+- Public-health informatics
+- Governance-aware AI systems
 - Privacy-preserving spatial analytics
+- Decision-support systems
 
 ---
 
-# Author
+## Citation
 
-Godwin Etim Akpan
+If referencing this repository, please cite:
 
-Geospatial Data Analyst | GeoAI Researcher | Big Data Technologies MSc Candidate
+Akpan, G. E. (2026). *Design and Evaluation of a Privacy-Preserving GeoAI Health Surveillance System Using a Hybrid Cloud Architecture*. MSc Big Data Technologies Dissertation, University of East London / UNICAF.
 
-GitHub:
+---
+
+## Author
+
+Godwin Etim Akpan  
+Geospatial Data Analyst | GeoAI Researcher | MSc Big Data Technologies Candidate
+
+GitHub:  
 https://github.com/Jedidiah82
 
 ---
 
-# License
+## License
 
-This repository is currently intended for academic research, demonstration, and educational purposes.
+This repository is intended for academic research, demonstration, and educational purposes.
+
+Use of the code, data, or outputs should acknowledge the academic context of the dissertation and should not be interpreted as an operational public-health surveillance deployment.
