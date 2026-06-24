@@ -124,14 +124,20 @@ No personally identifiable information is stored or exposed within the prototype
 
 ## System Architecture
 
-The prototype follows a governance-aware hybrid GeoAI architecture consisting of:
+The prototype follows a governance-aware hybrid GeoAI architecture that connects field data capture, controlled data ingestion, privacy-preserving data governance, secure API mediation, cloud-based GeoAI analytics, explainability, decision support, scheduled refresh, and governance monitoring.
 
-1. Private data governance layer
-2. Secure API mediation layer
-3. GeoAI analytics layer
-4. Explainability and decision-support layer
-5. Operational dashboard interface
-6. Governance monitoring and audit logging
+The architecture consists of the following layers:
+
+1. Field data collection layer
+2. Controlled ingestion service
+3. Private data governance zone
+4. Security and API mediation layer
+5. Cloud analytics zone
+6. GeoAI modelling and spatial analytics layer
+7. Explainable AI layer
+8. Decision-support layer
+9. Near real-time update scheduler
+10. Observability, security, and governance monitoring layer
 
 ![System Architecture](figures/system_architecture.png)
 
