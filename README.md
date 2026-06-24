@@ -249,6 +249,12 @@ Key evaluation findings include:
 - Role-based access control
 - Audit logging
 
+### Data Storage and Geospatial Database
+
+- File-based prototype data store using CSV and GeoJSON
+- PostgreSQL/PostGIS proposed as the production-scale geospatial database extension
+- pgAdmin used for database inspection and management during development
+
 ### Deployment
 
 - Docker
