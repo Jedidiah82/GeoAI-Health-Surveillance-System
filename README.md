@@ -389,7 +389,7 @@ http://127.0.0.1:8000/docs
 
 ## Prototype Authentication and Access Control
 
-The prototype implements JWT-based authentication with Role-Based Access Control (RBAC) to demonstrate secure access to protected API endpoints and dashboard functionality. This supports the dissertation’s emphasis on privacy-aware, governance-conscious, and controlled access to health surveillance functionality.
+<<The prototype implements JWT-based authentication with Role-Based Access Control (RBAC) to demonstrate secure access to protected API endpoints and dashboard functionality. This supports the dissertation's emphasis on privacy-aware, governance-conscious, and controlled access to health surveillance functionality.
 
 For security reasons, demonstration credentials, JWT secrets, and environment-specific configuration values are not included in this public repository. The repository documents the authentication structure and supported user roles without exposing reusable credentials.
 
@@ -436,7 +436,7 @@ ANALYST_USERNAME=your_analyst_username
 ANALYST_PASSWORD=your_analyst_password
 ```
 
-The actual `.env` file must not be committed to version control. It should be listed in `.gitignore` to ensure that real credentials and secrets remain private.
+<<The actual `.env` file must not be committed to version control. It is listed in `.gitignore` to ensure that real credentials and secrets remain private.
 
 ```gitignore
 .env
@@ -601,8 +601,10 @@ https://github.com/Jedidiah82
 
 ---
 
-## License and Academic Use
+<<## License and Reuse
 
-This repository is intended for academic research, demonstration, and educational purposes.
+Copyright (c) 2026 Godwin Etim Akpan. All rights reserved.
+
+This repository is shared for academic review, dissertation examination, demonstration, and educational reference. Public availability does not grant permission to reproduce, redistribute, redeploy, commercialise, or adapt the code, data, trained model, figures, or outputs without written authorisation from the author, except where permitted by applicable law or institutional examination procedures.
 
 Use of the code, data, or outputs should acknowledge the academic context of the dissertation and should not be interpreted as an operational public-health surveillance deployment.

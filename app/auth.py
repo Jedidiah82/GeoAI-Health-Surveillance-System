@@ -1,23 +1,41 @@
 from datetime import datetime, timedelta
+import os
+
 from jose import JWTError, jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from dotenv import load_dotenv
 
-SECRET_KEY = "geoai_dissertation_secret_key_change_later"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+load_dotenv()
+
+
+def require_env(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise RuntimeError(
+            f"Missing required environment variable: {name}. "
+            "Create a .env file from .env.example before running the API."
+        )
+    return value
+
+
+SECRET_KEY = require_env("JWT_SECRET")
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(
+    os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 fake_users_db = {
-    "analyst": {
-        "username": "analyst",
-        "password": "analyst123",
+    require_env("ANALYST_USERNAME"): {
+        "username": require_env("ANALYST_USERNAME"),
+        "password": require_env("ANALYST_PASSWORD"),
         "role": "analyst"
     },
-    "admin": {
-        "username": "admin",
-        "password": "admin123",
+    require_env("ADMIN_USERNAME"): {
+        "username": require_env("ADMIN_USERNAME"),
+        "password": require_env("ADMIN_PASSWORD"),
         "role": "admin"
     }
 }

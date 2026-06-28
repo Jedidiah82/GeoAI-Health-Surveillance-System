@@ -12,6 +12,7 @@ xgboost
 shap
 joblib
 python-jose
+python-dotenv
 passlib[bcrypt]
 python-multipart
 matplotlib
