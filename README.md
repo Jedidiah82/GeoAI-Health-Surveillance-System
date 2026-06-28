@@ -389,7 +389,7 @@ http://127.0.0.1:8000/docs
 
 ## Prototype Authentication and Access Control
 
-<<The prototype implements JWT-based authentication with Role-Based Access Control (RBAC) to demonstrate secure access to protected API endpoints and dashboard functionality. This supports the dissertation's emphasis on privacy-aware, governance-conscious, and controlled access to health surveillance functionality.
+The prototype implements JWT-based authentication with Role-Based Access Control (RBAC) to demonstrate secure access to protected API endpoints and dashboard functionality. This supports the dissertation's emphasis on privacy-aware, governance-conscious, and controlled access to health surveillance functionality.
 
 For security reasons, demonstration credentials, JWT secrets, and environment-specific configuration values are not included in this public repository. The repository documents the authentication structure and supported user roles without exposing reusable credentials.
 
