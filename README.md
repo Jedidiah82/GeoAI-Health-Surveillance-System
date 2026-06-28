@@ -387,27 +387,64 @@ http://127.0.0.1:8000/docs
 
 ---
 
-## Prototype API Credentials
+## Prototype Authentication and Access Control
 
-The following credentials are provided for prototype demonstration only.
+The prototype implements JWT-based authentication with Role-Based Access Control (RBAC) to demonstrate secure access to protected API endpoints and dashboard functionality. This supports the dissertation’s emphasis on privacy-aware, governance-conscious, and controlled access to health surveillance functionality.
 
-### Analyst User
+For security reasons, demonstration credentials, JWT secrets, and environment-specific configuration values are not included in this public repository. The repository documents the authentication structure and supported user roles without exposing reusable credentials.
 
-```text
-Username: analyst
-Password: analyst123
-Role: analyst
+### Supported Prototype Roles
+
+#### Analyst Role
+
+**Role:** `analyst`
+
+**Permissions:**
+
+- View the surveillance dashboard
+- Access authorised API endpoints
+- View outbreak-risk predictions
+- Review geospatial and epidemiological outputs
+
+#### Administrator Role
+
+**Role:** `admin`
+
+**Permissions:**
+
+- Full dashboard access
+- Administrative API access
+- User and system management functions
+- Audit log access
+- Configuration and governance-related controls
+
+### Environment Configuration
+
+To run the prototype locally or in a controlled deployment environment, create a `.env` file using the provided `.env.example` template. The `.env` file should contain the required credentials, JWT secret, token settings, and application-specific configuration values.
+
+A sample `.env.example` file is provided below:
+
+```env
+JWT_SECRET=your_jwt_secret_here
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+
+ADMIN_USERNAME=your_admin_username
+ADMIN_PASSWORD=your_admin_password
+
+ANALYST_USERNAME=your_analyst_username
+ANALYST_PASSWORD=your_analyst_password
 ```
 
-### Admin User
+The actual `.env` file must not be committed to version control. It should be listed in `.gitignore` to ensure that real credentials and secrets remain private.
 
-```text
-Username: admin
-Password: admin123
-Role: admin
+```gitignore
+.env
 ```
 
-These credentials are not intended for production use. Any operational deployment would require secure credential management, password hashing, HTTPS enforcement, and institutional access-control procedures.
+### Security Note
+
+This repository is intended to demonstrate the prototype architecture, authentication workflow, role-based access structure, and implementation logic developed for the dissertation. It does not publish live credentials, production secrets, or restricted operational configuration. Any deployment beyond local demonstration should use institutionally approved credential management, HTTPS enforcement, secure password hashing, audit controls, and appropriate data governance procedures.
 
 ---
 
