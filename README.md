@@ -601,7 +601,7 @@ https://github.com/Jedidiah82
 
 ---
 
-<<## License and Reuse
+## License and Reuse
 
 Copyright (c) 2026 Godwin Etim Akpan. All rights reserved.
 
