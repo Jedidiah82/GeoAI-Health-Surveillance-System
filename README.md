@@ -436,7 +436,7 @@ ANALYST_USERNAME=your_analyst_username
 ANALYST_PASSWORD=your_analyst_password
 ```
 
-<<The actual `.env` file must not be committed to version control. It is listed in `.gitignore` to ensure that real credentials and secrets remain private.
+_The actual `.env` file must not be committed to version control. It is listed in `.gitignore` to ensure that real credentials and secrets remain private._
 
 ```gitignore
 .env
