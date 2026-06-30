@@ -24,11 +24,11 @@ def create_geoai_map():
     # --------------------------------
 
     district_gdf = gpd.read_file(
-        "data/geoai_spatial_intelligence.geojson"
+        "data/demo_geoai_spatial_intelligence.geojson"
     )
 
     county_gdf = gpd.read_file(
-        "data/lbr_admin1.geojson"
+        "data/demo_lbr_admin1.geojson"
     )
 
     # --------------------------------
