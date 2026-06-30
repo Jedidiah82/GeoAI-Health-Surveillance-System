@@ -1,3 +1,11 @@
+# Trained models and model artefacts
+models/*
+!models/README.md
+*.pkl
+*.joblib
+*.sav
+*.model
+
 # Private environment and secrets
 .env
 *.env
