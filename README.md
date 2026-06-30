@@ -54,7 +54,15 @@ https://geoai-health-surveillance-system-bygrraq7o4uwsfokny3lhg.streamlit.app/
 **GitHub Repository:**  
 https://github.com/Jedidiah82/GeoAI-Health-Surveillance-System
 
-> Note: The API endpoint is provided as a prototype demonstration using HTTP. A production deployment would require HTTPS enforcement, secure credential management, infrastructure hardening, monitoring, and institutional governance approval.
+> Note: The Secure API Gateway is implemented as part of the prototype architecture but is not publicly listed in this README. Access to protected API documentation may be provided only for authorised academic review or examination purposes.
+
+---
+
+## Public Dashboard Data Notice
+
+The public Streamlit dashboard is provided for demonstration and examination purposes using safe demonstration data. Restricted research datasets, trained model artefacts, and sensitive operational files are not included in this public repository.
+
+The Secure API Gateway demonstrates controlled access to protected GeoAI surveillance intelligence through authentication, role-based access control, and auditability. Full research data and trained model artefacts may be made available only for authorised academic review or approved research purposes.
 
 ---
 
