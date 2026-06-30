@@ -33,7 +33,7 @@ with col3:
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv("data/geoai_surveillance_outputs.csv")
+    df = pd.read_csv("data/demo_geoai_surveillance_outputs.csv")
     df["Date"] = pd.to_datetime(
         df["Year"].astype(str) + "-" + df["Month"].astype(str) + "-01"
     )
@@ -59,7 +59,7 @@ avg_risk_score = latest_df["Outbreak_Probability"].mean()
 avg_risk_score_pct = avg_risk_score * 100
 
 try:
-    hotspot_gdf = gpd.read_file("data/geoai_spatial_intelligence.geojson")
+    hotspot_gdf = gpd.read_file("data/demo_geoai_spatial_intelligence.geojson")
 
     if "Hotspot_Class" in hotspot_gdf.columns:
         active_hotspots = (hotspot_gdf["Hotspot_Class"] == "Hotspot").sum()
@@ -653,7 +653,7 @@ are classified as higher or lower risk.
 # --------------------------------
 st.subheader("Model Confidence and Validation")
 
-model_results = pd.read_csv("data/final_geoai_model_comparison.csv")
+model_results = pd.read_csv("data/demo_final_geoai_model_comparison.csv")
 
 model_results_display = model_results.rename(
     columns={
