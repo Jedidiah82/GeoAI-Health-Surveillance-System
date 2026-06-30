@@ -610,6 +610,6 @@ https://github.com/Jedidiah82
 
 Copyright (c) 2026 Godwin Etim Akpan. All rights reserved.
 
-This repository is shared for academic review, dissertation examination, demonstration, and educational reference. Public availability does not grant permission to reproduce, redistribute, redeploy, commercialise, or adapt the code, data, trained model, figures, or outputs without written authorisation from the author, except where permitted by applicable law or institutional examination procedures.
+> This repository is shared for academic review, dissertation examination, demonstration, and educational reference. Public availability does not grant permission to reproduce, redistribute, redeploy, commercialise, or adapt the code, data, trained model, figures, or outputs without written authorisation from the author, except where permitted by applicable law or institutional examination procedures.
 
-Use of the code, data, or outputs should acknowledge the academic context of the dissertation and should not be interpreted as an operational public-health surveillance deployment.
+> Use of the code, data, or outputs should acknowledge the academic context of the dissertation and should not be interpreted as an operational public-health surveillance deployment.
