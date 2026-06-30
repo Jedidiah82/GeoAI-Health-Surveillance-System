@@ -66,6 +66,16 @@ The Secure API Gateway demonstrates controlled access to protected GeoAI surveil
 
 ---
 
+## Data Availability
+
+This repository contains demonstration datasets for reproducibility and public evaluation of the dashboard.
+
+The full research datasets used during the evaluation of the dissertation are not publicly distributed because they form part of a privacy-preserving research artefact.
+
+Researchers interested in reproducing the workflow may use the included demonstration datasets or contact the author regarding appropriate access to additional materials where institutional and ethical requirements permit.
+
+---
+
 ## Academic Disclaimer
 
 This system is a research prototype developed for academic demonstration as part of an MSc dissertation.
