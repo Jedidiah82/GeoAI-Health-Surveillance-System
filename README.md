@@ -51,9 +51,6 @@ The prototype integrates:
 **Dashboard:**  
 https://geoai-health-surveillance-system-bygrraq7o4uwsfokny3lhg.streamlit.app/
 
-**Secure API Documentation:**  
-http://18.217.5.170:8000/docs#/
-
 **GitHub Repository:**  
 https://github.com/Jedidiah82/GeoAI-Health-Surveillance-System
 
