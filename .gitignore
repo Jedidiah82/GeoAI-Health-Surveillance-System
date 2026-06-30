@@ -24,6 +24,10 @@ data/*
 *.geojson
 *.xlsx
 
+# Allow safe public demo data
+!data/demo_*.csv
+!data/demo_*.geojson
+
 # Python
 __pycache__/
 *.pyc
