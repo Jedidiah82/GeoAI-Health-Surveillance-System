@@ -1,3 +1,21 @@
+# Private environment and secrets
+.env
+*.env
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Research data files
+data/*
+!data/README.md
+
+# Common data formats anywhere in the repo
+*.csv
+*.geojson
+*.xlsx
+
 # Python
 __pycache__/
 *.pyc
@@ -15,10 +33,6 @@ env/
 # Logs and runtime outputs
 logs/*.csv
 data/refresh_backups/
-
-# Environment/secrets
-.env
-*.env
 
 # OS files
 .DS_Store
