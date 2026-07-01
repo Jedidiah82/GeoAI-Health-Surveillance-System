@@ -327,8 +327,6 @@ GeoAI-Health-Surveillance-System/
 |-- requirements.txt
 ```
 
----
-
 The public repository includes safe demonstration datasets required to run and review the Streamlit dashboard. Restricted research datasets, trained model artefacts, live credentials, JWT secrets, and environment-specific configuration files are not included in the public repository.
 
 The `data/README.md` file documents the data-access position, while `models/README.md` explains why trained model artefacts are excluded from public distribution. Local or authorised deployments may use private data and model files outside the public repository, subject to appropriate permission and governance requirements.
