@@ -286,25 +286,22 @@ Key evaluation findings include:
 GeoAI-Health-Surveillance-System/
 |
 |-- app/
+|   |-- __init__.py
 |   |-- api.py
+|   |-- audit_logger.py
 |   |-- auth.py
 |   |-- dashboard.py
-|   |-- map_utils.py
-|   |-- audit_logger.py
-|   |-- refresh_simulator.py
 |   |-- data_governance.py
+|   |-- map_utils.py
 |   |-- model_engine.py
-|   |-- __init__.py
+|   |-- refresh_simulator.py
 |
 |-- data/
-|   |-- covid_hotspots.geojson
-|   |-- covid_local_morans.geojson
-|   |-- district_summary.csv
-|   |-- final_geoai_model_comparison.csv
-|   |-- geoai_spatial_intelligence.geojson
-|   |-- geoai_surveillance_outputs.csv
-|   |-- lbr_admin1.geojson
-|   |-- lbr_admin2.geojson
+|   |-- README.md
+|   |-- demo_final_geoai_model_comparison.csv
+|   |-- demo_geoai_spatial_intelligence.geojson
+|   |-- demo_geoai_surveillance_outputs.csv
+|   |-- demo_lbr_admin1.geojson
 |
 |-- figures/
 |   |-- system_architecture.png
@@ -319,17 +316,22 @@ GeoAI-Health-Surveillance-System/
 |   |-- shap/
 |
 |-- models/
-|   |-- xgb_model.pkl
+|   |-- README.md
 |
+|-- .dockerignore
+|-- .env.example
+|-- .gitignore
 |-- Dockerfile
 |-- docker-compose.yml
-|-- requirements.txt
 |-- README.md
+|-- requirements.txt
 ```
 
----
+The public repository includes safe demonstration datasets required to run and review the Streamlit dashboard. Restricted research datasets, trained model artefacts, live credentials, JWT secrets, and environment-specific configuration files are not included in the public repository.
 
-Note: `data_governance.py` and `model_engine.py` are retained as placeholder modules for future extension of governance and model-serving functionality.
+The `data/README.md` file documents the data-access position, while `models/README.md` explains why trained model artefacts are excluded from public distribution. Local or authorised deployments may use private data and model files outside the public repository, subject to appropriate permission and governance requirements.
+
+Note: `data_governance.py` and `model_engine.py` are retained as prototype modules for governance workflow logic and future model-serving extension.
 
 ---
 
