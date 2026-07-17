@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import os
 import streamlit as st
 import pandas as pd
@@ -8,7 +10,18 @@ from branca.element import MacroElement, Template
 from map_utils import create_geoai_map
 from audit_logger import log_event
 from streamlit_folium import st_folium
-from datetime import datetime
+from datetime import datetime, timezone
+
+# ---------------------------------------------------
+# Project paths
+# ---------------------------------------------------
+
+APP_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = APP_DIR.parent
+
+DATA_DIR = PROJECT_ROOT / "data"
+FIGURES_DIR = PROJECT_ROOT / "figures"
+LOGS_DIR = PROJECT_ROOT / "logs"
 
 st.set_page_config(
     page_title="GeoAI Surveillance Dashboard",
@@ -18,7 +31,7 @@ st.set_page_config(
 st.title("GeoAI Surveillance Dashboard Prototype")
 st.caption("Privacy-preserving district-level COVID-19 outbreak risk monitoring system")
 
-st.caption(f"Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC")
+st.caption(f"Last Updated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC")
 
 col1, col2, col3 = st.columns(3)
 
@@ -31,35 +44,113 @@ with col2:
 with col3:
     st.warning("Audit Logging: Active")
 
+def _first_existing_path(paths):
+    """Return the first existing path from a collection of Path objects."""
+    for path in paths:
+        path = Path(path)
+
+        if path.exists():
+            return path
+
+    raise FileNotFoundError(
+        "None of the expected data files were found:\n- "
+        + "\n- ".join(str(path) for path in paths)
+    )
+
+
 @st.cache_data
 def load_data():
-    df = pd.read_csv("data/demo_geoai_surveillance_outputs.csv")
-    df["Date"] = pd.to_datetime(
-        df["Year"].astype(str) + "-" + df["Month"].astype(str) + "-01"
-    )
-    return df
+    """Load the full leakage-controlled district-month modelling output."""
+    data_path = _first_existing_path([
+        DATA_DIR / "GeoAI_Modelling_Outputs_All_4760_Observations.csv",
+        DATA_DIR / "Corrected_GeoAI_Modelling_Outputs_All_4760_Observations.csv",
+    ])
+
+    data = pd.read_csv(data_path)
+
+    if "Date" in data.columns:
+        data["Date"] = pd.to_datetime(data["Date"], errors="coerce")
+    else:
+        data["Date"] = pd.to_datetime(
+            {
+                "year": data["Year"],
+                "month": data["Month"],
+                "day": 1,
+            },
+            errors="coerce",
+        )
+
+    required_columns = {
+        "adm2_pcode",
+        "adm2_name",
+        "adm1_name",
+        "Year",
+        "Month",
+        "COUNT_OBJECTID",
+        "Incidence_100k",
+        "Rainfall_mm",
+        "Temperature_C",
+        "Predicted_Probability",
+    }
+
+    missing = sorted(required_columns.difference(data.columns))
+    if missing:
+        raise ValueError(
+            "The modelling output is missing required columns: "
+            + ", ".join(missing)
+        )
+
+    return data.sort_values(
+        ["adm2_pcode", "Date"]
+    ).reset_index(drop=True)
+
+
+@st.cache_data
+def load_latest_predictions():
+    """Load the latest district predictions used by the maps and dashboard."""
+    latest_path = _first_existing_path([
+        DATA_DIR / "Latest_District_Risk_Predictions.csv",
+        DATA_DIR / "Corrected_Latest_District_Risk_Predictions.csv",
+    ])
+
+    latest = pd.read_csv(latest_path)
+    latest["Date"] = pd.to_datetime(latest["Date"], errors="coerce")
+
+    required_columns = {
+        "adm2_pcode",
+        "adm2_name",
+        "adm1_name",
+        "Predicted_Probability",
+        "Risk_Level",
+    }
+
+    missing = sorted(required_columns.difference(latest.columns))
+    if missing:
+        raise ValueError(
+            "The latest-predictions file is missing required columns: "
+            + ", ".join(missing)
+        )
+
+    return latest.sort_values(
+        "Predicted_Probability",
+        ascending=False,
+    ).reset_index(drop=True)
 
 
 df = load_data()
+latest_df = load_latest_predictions()
 
 
 # --------------------------------
 # Operational Summary Metrics
 # --------------------------------
 
-latest_df = (
-    df.sort_values(["Year", "Month"])
-      .groupby("adm2_name")
-      .tail(1)
-      .copy()
-)
-
 high_risk_count = (latest_df["Risk_Level"] == "High Risk").sum()
-avg_risk_score = latest_df["Outbreak_Probability"].mean()
+avg_risk_score = latest_df["Predicted_Probability"].mean()
 avg_risk_score_pct = avg_risk_score * 100
 
 try:
-    hotspot_gdf = gpd.read_file("data/demo_geoai_spatial_intelligence.geojson")
+    hotspot_gdf = gpd.read_file(DATA_DIR / "GeoAI_District_Risk_Combined.geojson")
 
     if "Hotspot_Class" in hotspot_gdf.columns:
         active_hotspots = (hotspot_gdf["Hotspot_Class"] == "Hotspot").sum()
@@ -77,12 +168,17 @@ except Exception:
     active_hotspots = "N/A"
 
 try:
-    audit_log = pd.read_csv("logs/audit_log.csv")
+    audit_log = pd.read_csv(LOGS_DIR / "audit_log.csv")
     governance_events = len(audit_log)
 except FileNotFoundError:
     governance_events = 0
 
-latest_data_period = latest_df["Date"].max().strftime("%b %Y")
+latest_date = latest_df["Date"].max()
+latest_data_period = (
+    latest_date.strftime("%b %Y")
+    if pd.notna(latest_date)
+    else "Unavailable"
+)
 
 m1, m2, m3, m4, m5 = st.columns(5)
 
@@ -171,7 +267,7 @@ county_districts
 
 top_risk = (
     latest_df
-      .sort_values(by="Outbreak_Probability", ascending=False)
+      .sort_values(by="Predicted_Probability", ascending=False)
       .head(10)
       .copy()
 )
@@ -188,7 +284,7 @@ top_risk_display = top_risk.rename(
     columns={
         "adm2_name": "District",
         "adm1_name": "County",
-        "Outbreak_Probability": "Predicted Outbreak Probability (0–1)",
+        "Predicted_Probability": "Predicted Outbreak Probability (0–1)",
         "Risk_Level": "Surveillance Risk Level"
     }
 )[[
@@ -226,11 +322,15 @@ end_period = df["Date"].max().strftime("%B %Y")
 
 st.caption(f"Dataset Coverage Period: {start_period} – {end_period}")
 
-district_df = df[df["adm2_name"] == selected_district].copy()
+district_df = (
+    df[df["adm2_name"] == selected_district]
+    .sort_values("Date")
+    .copy()
+)
 
-latest_record = district_df.sort_values(
-    ["Year", "Month"]
-).iloc[-1]
+latest_record = latest_df[
+    latest_df["adm2_name"] == selected_district
+].iloc[0]
 
 
 # -----------------------------
@@ -240,7 +340,7 @@ col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("District", latest_record["adm2_name"])
 col2.metric("County", latest_record["adm1_name"])
-col3.metric("Outbreak Probability", f"{latest_record['Outbreak_Probability'] * 100:.2f}%")
+col3.metric("Outbreak Probability", f"{latest_record['Predicted_Probability'] * 100:.2f}%")
 col4.metric("Risk Level", latest_record["Risk_Level"])
 
 
@@ -256,7 +356,7 @@ The dashboard presents GeoAI risk outputs in three complementary ways:
   - Higher values indicate greater predicted outbreak risk.
 
 - **Surveillance Risk Level**
-  - Districts are grouped into **Low**, **Moderate**, and **High Risk** categories using quantile-based classification of the predicted outbreak probabilities.
+  - Districts are grouped into **Low**, **Moderate**, and **High Risk** categories using tertiles of the latest predicted probabilities across all 136 districts.
   - These categories represent relative levels of predicted risk across districts rather than fixed epidemiological thresholds.
   - The resulting classifications are displayed on the GeoAI Risk Classification Map.
 
@@ -266,7 +366,7 @@ The dashboard presents GeoAI risk outputs in three complementary ways:
 
 ### Understanding the Difference
 
-The **GeoAI Risk Classification Map** groups all districts into Low-, Moderate-, and High-Risk categories based on their relative predicted outbreak risk.
+The **GeoAI Risk Classification Map** groups all districts into Low-, Moderate-, and High-Risk categories based on tertiles of the latest predicted probabilities.
 
 The **Top Risk Districts** table ranks districts according to their current predicted outbreak probabilities and displays only the highest-ranked districts.
 
@@ -331,14 +431,14 @@ st.caption(
     f"Current classification based on GeoAI prediction: "
     f"{latest_record['Risk_Level']} "
     f"(Predicted outbreak probability = "
-    f"{latest_record['Outbreak_Probability']*100:.2f}%)."
+    f"{latest_record['Predicted_Probability']*100:.2f}%)."
 )
 
 latest_two = district_df.sort_values("Date").tail(2)
 
 if len(latest_two) == 2:
-    previous = latest_two.iloc[0]["Outbreak_Probability"]
-    current = latest_two.iloc[1]["Outbreak_Probability"]
+    previous = latest_two.iloc[0]["Predicted_Probability"]
+    current = latest_two.iloc[1]["Predicted_Probability"]
 
     if current > previous * 1.05:
         trend_status = "Increasing"
@@ -352,7 +452,7 @@ if len(latest_two) == 2:
     with trend_col1:
         st.metric(
             "Current Outbreak Probability",
-            f"{latest_record['Outbreak_Probability']*100:.2f}%"
+            f"{latest_record['Predicted_Probability']*100:.2f}%"
         )
 
     with trend_col2:
@@ -375,7 +475,7 @@ with st.expander("About this trend chart"):
 trend_fig = px.line(
     district_df.sort_values("Date"),
     x="Date",
-    y="Outbreak_Probability",
+    y="Predicted_Probability",
     markers=True,
     title=f"Outbreak Probability Trend: {selected_district}"
 )
@@ -408,12 +508,12 @@ moderate_risk_count = latest_df[
 
 if high_risk_count > 0:
     st.error(
-        f"{high_risk_count} district(s) are currently ranked within the highest outbreak-probability group."
+        f"{high_risk_count} district(s) are currently classified in the highest relative-risk tertile."
     )
 
 if moderate_risk_count > 0:
     st.warning(
-        f"{moderate_risk_count} district(s) are currently flagged for enhanced surveillance monitoring."
+        f"{moderate_risk_count} district(s) are currently classified in the middle relative-risk tertile."
     )
 
 if high_risk_count == 0 and moderate_risk_count == 0:
@@ -455,9 +555,9 @@ legend_template = """
 ">
 <b>District Risk Classification</b><br>
 <small>Predicted outbreak-risk category</small><br><br>
-<span style="background:#66c2a5;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Low Risk<br>
-<span style="background:#f6c85f;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Moderate Risk<br>
-<span style="background:#d73027;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>High Risk
+<span style="background:#2ECC71;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Low Risk<br>
+<span style="background:#F39C12;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Moderate Risk<br>
+<span style="background:#E74C3C;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>High Risk
 </div>
 {% endmacro %}
 """
@@ -625,26 +725,57 @@ with st.expander("About explainable GeoAI intelligence"):
 
 col1, col2 = st.columns(2)
 
-if os.path.exists("figures/xgboost_shap_summary_plot.png"):
+shap_summary_path = next(
+    (
+        path for path in [
+            FIGURES_DIR / "Figure_4_12_Corrected_SHAP_Summary.png",
+            FIGURES_DIR / "Figure_4_12_SHAP_Summary.png",
+            FIGURES_DIR / "xgboost_shap_summary_plot.png",
+        ]
+        if path.exists()
+    ),
+    None,
+)
+
+shap_importance_path = next(
+    (
+        path for path in [
+            FIGURES_DIR / "Figure_4_11_Corrected_SHAP_Feature_Importance.png",
+            FIGURES_DIR / "Figure_4_11_SHAP_Feature_Importance.png",
+            FIGURES_DIR / "xgboost_feature_importance.png",
+        ]
+        if path.exists()
+    ),
+    None,
+)
+
+if shap_summary_path:
     with col1:
         st.image(
-            "figures/xgboost_shap_summary_plot.png",
-            caption="Explanation of key factors influencing outbreak-risk predictions",
-            use_container_width=True
+            shap_summary_path,
+            caption="SHAP summary of feature effects on XGBoost predictions",
+            use_container_width=True,
         )
 
-if os.path.exists("figures/xgboost_feature_importance.png"):
+if shap_importance_path:
     with col2:
         st.image(
-            "figures/xgboost_feature_importance.png",
-            caption="Key Drivers of Outbreak Risk",
-            use_container_width=True
+            shap_importance_path,
+            caption="Mean absolute SHAP importance for the selected XGBoost model",
+            use_container_width=True,
         )
 
+if not shap_summary_path and not shap_importance_path:
+    st.warning(
+        "Explainability figures were not found. Check the files in the figures folder."
+    )
+
 st.info("""
-Interpretation: The dashboard identifies the main factors associated with predicted outbreak risk.
-Recent case trends, population density, rainfall, and temperature help explain why some districts
-are classified as higher or lower risk.
+Interpretation: Temperature, population density, and previous-period case activity
+were the leading influences on the selected XGBoost model. Higher population density
+and elevated previous-period case counts generally increased predicted risk, while
+temperature and rainfall effects were non-linear. These associations are explanatory
+model patterns and should not be interpreted as causal effects.
 """)
 
 
@@ -653,7 +784,15 @@ are classified as higher or lower risk.
 # --------------------------------
 st.subheader("Model Confidence and Validation")
 
-model_results = pd.read_csv("data/demo_final_geoai_model_comparison.csv")
+model_results_path = _first_existing_path([
+    DATA_DIR / "Table_4_4_Corrected_Model_Performance.csv",
+    DATA_DIR / "final_geoai_model_comparison.csv",
+    DATA_DIR / "demo_final_geoai_model_comparison.csv",
+])
+
+model_results = pd.read_csv(model_results_path)
+
+model_results = pd.read_csv(model_results_path)
 
 model_results_display = model_results.rename(
     columns={
@@ -679,13 +818,14 @@ st.dataframe(
 )
 
 best_model = model_results.sort_values(
-    by=["ROC_AUC", "F1_Score"],
-    ascending=False
+    by=["F1_Score", "Recall", "ROC_AUC"],
+    ascending=False,
 ).iloc[0]
 
 st.success(
-    f"Best performing model: {best_model['Model']} "
-    f"with strong overall prediction performance and balanced outbreak-detection capability."
+    f"Selected model: {best_model['Model']}. "
+    f"It provided the strongest balance of F1-score, recall, and overall discrimination "
+    f"for district-level outbreak-risk classification."
 )
 
 st.caption("""
@@ -712,12 +852,6 @@ with st.expander("About risk level distribution"):
     This summary displays the current distribution of district outbreak-risk
     classifications across Liberia.
     """)
-
-latest_df = (
-    df.sort_values(["Year", "Month"])
-      .groupby("adm2_name")
-      .tail(1)
-)
 
 risk_counts = latest_df["Risk_Level"].value_counts().reset_index()
 risk_counts.columns = ["Risk Level", "District Count"]
@@ -749,26 +883,55 @@ with st.expander("About analytical map outputs"):
     environmental conditions, hotspot activity, and GeoAI predictions.
     """)
 
+# --------------------------------
+# Analytical maps
+# --------------------------------
+
+MAPS_DIR = FIGURES_DIR / "maps"
+
 map_files = {
-    "Study Area / Administrative Reference Map": "figures/maps/Study Area - Administrative Reference Map.png",
-    "GeoAI-Predicted Outbreak Probability": "figures/maps/GeoAI Outbreak Probability Map.png",
-    "GeoAI-Based Risk Classification": "figures/maps/GeoAI Risk Classification Map.png",
-    "GeoAI-Derived Spatial Hotspot Intelligence": "figures/maps/GEOAI HOTSPOT MAP.png",
-    "Local Moran's I Cluster Analysis": "figures/maps/Local Moran’s I Cluster_Outlier Map.png",
-    "Traditional Getis-Ord Gi* Hotspot Analysis": "figures/maps/Traditional Hotspot Analysis Map (Getis-Ord Gi).png",
-    "Temperature Distribution": "figures/maps/Temperature Distribution Map.png",
-    "Rainfall Distribution": "figures/maps/Rainfall Distribution Map.png",
-    "Reported COVID-19 Cases": "figures/maps/COVID-19 Case Count Map.png",
-    "Cumulative COVID-19 Incidence": "figures/maps/Cumulative Incidence Map.png",
-    "Population Density (2022)": "figures/maps/population_density_2022.png",
+    "Study Area / Administrative Reference Map":
+        MAPS_DIR / "Study Area - Administrative Reference Map.png",
+
+    "Predicted COVID-19 Outbreak Probability":
+        MAPS_DIR / "GeoAI Outbreak Probability Map.png",
+
+    "Relative COVID-19 Outbreak Risk Classification":
+        MAPS_DIR / "GeoAI Risk Classification Map.png",
+
+    "GeoAI-Derived Spatial Hotspot Intelligence":
+        MAPS_DIR / "GEOAI HOTSPOT MAP.png",
+
+    "Local Moran's I Cluster Analysis":
+        MAPS_DIR / "Local Moran’s I Cluster_Outlier Map.png",
+
+    "Traditional Getis-Ord Gi* Hotspot Analysis":
+        MAPS_DIR / "Traditional Hotspot Analysis Map (Getis-Ord Gi).png",
+
+    "Temperature Distribution":
+        MAPS_DIR / "Temperature Distribution Map.png",
+
+    "Rainfall Distribution":
+        MAPS_DIR / "Rainfall Distribution Map.png",
+
+    "Reported COVID-19 Cases":
+        MAPS_DIR / "COVID-19 Case Count Map.png",
+
+    "Cumulative COVID-19 Incidence":
+        MAPS_DIR / "Cumulative Incidence Map.png",
+
+    "Population Density (2022)":
+        MAPS_DIR / "population_density_2022.png",
 }
 
 available_maps = {
-    name: path for name, path in map_files.items()
-    if os.path.exists(path)
+    name: path
+    for name, path in map_files.items()
+    if path.exists()
 }
 
 if available_maps:
+
     selected_map = st.selectbox(
         "Select analytical map output",
         list(available_maps.keys())
@@ -779,9 +942,12 @@ if available_maps:
         caption=selected_map,
         use_container_width=True
     )
-else:
-    st.warning("No map images found. Check the file names inside figures/maps.")
 
+else:
+
+    st.warning(
+        "No map images found. Check the file names inside figures/maps."
+    )
 
 # --------------------------------
 # Data Table: Aggregated Surveillance Data
@@ -798,6 +964,11 @@ with st.expander("About this surveillance data table"):
     indicate greater predicted outbreak risk.
     """)
 
+st.caption(
+    f"Current relative surveillance category for {selected_district}: "
+    f"{latest_record['Risk_Level']}."
+)
+
 display_df = district_df[
     [
         "adm2_pcode",
@@ -809,8 +980,8 @@ display_df = district_df[
         "Incidence_100k",
         "Rainfall_mm",
         "Temperature_C",
-        "Outbreak_Probability",
-        "Risk_Level"
+        "Predicted_Probability",
+        "Predicted_Class"
     ]
 ].sort_values(["Year", "Month"])
 
@@ -824,7 +995,7 @@ display_df = display_df.rename(
         "Incidence_100k": "Incidence per 100k",
         "Rainfall_mm": "Rainfall (mm)",
         "Temperature_C": "Temperature (°C)",
-        "Outbreak_Probability": "Predicted Outbreak Probability (0–1)",
+        "Predicted_Probability": "Predicted Outbreak Probability (0–1)",
         "Risk_Level": "Surveillance Risk Level"
     }
 )

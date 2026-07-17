@@ -1,59 +1,250 @@
-import geopandas as gpd
-import folium
+from pathlib import Path
 
+import folium
+import geopandas as gpd
+import pandas as pd
+
+
+# ---------------------------------------------------
+# Project paths
+# ---------------------------------------------------
+
+APP_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = APP_DIR.parent
+DATA_DIR = PROJECT_ROOT / "data"
+
+DISTRICT_FILE = DATA_DIR / "GeoAI_District_Risk_Combined.geojson"
+COUNTY_FILE = DATA_DIR / "lbr_admin1.geojson"
+
+
+# ---------------------------------------------------
+# Hotspot classification
+# ---------------------------------------------------
 
 def classify_hotspot(zscore, pvalue):
     """
-    Classify Getis-Ord Gi* hotspot significance
+    Classify Getis-Ord Gi* hotspot significance.
+
+    Parameters
+    ----------
+    zscore : float
+        Getis-Ord Gi* z-score.
+    pvalue : float
+        Getis-Ord Gi* p-value.
+
+    Returns
+    -------
+    str
+        Hotspot, Coldspot, Not Significant, or Not Available.
     """
+
+    if pd.isna(zscore) or pd.isna(pvalue):
+        return "Not Available"
 
     if pvalue <= 0.05 and zscore > 1.96:
         return "Hotspot"
 
-    elif pvalue <= 0.05 and zscore < -1.96:
+    if pvalue <= 0.05 and zscore < -1.96:
         return "Coldspot"
 
-    else:
-        return "Not Significant"
+    return "Not Significant"
 
+
+# ---------------------------------------------------
+# Safe numeric formatting
+# ---------------------------------------------------
+
+def format_numeric(value, decimals=2, suffix=""):
+    """
+    Safely format numeric values for Folium tooltips.
+    """
+
+    value = pd.to_numeric(value, errors="coerce")
+
+    if pd.isna(value):
+        return "Not Available"
+
+    return f"{value:.{decimals}f}{suffix}"
+
+
+# ---------------------------------------------------
+# Validate required fields
+# ---------------------------------------------------
+
+def validate_fields(gdf, required_fields, layer_name):
+    """
+    Raise a clear error if required fields are missing.
+    """
+
+    missing_fields = [
+        field for field in required_fields
+        if field not in gdf.columns
+    ]
+
+    if missing_fields:
+        raise ValueError(
+            f"{layer_name} is missing required fields: "
+            f"{', '.join(missing_fields)}"
+        )
+
+
+# ---------------------------------------------------
+# Create interactive GeoAI map
+# ---------------------------------------------------
 
 def create_geoai_map():
+    """
+    Create the operational GeoAI spatial intelligence map.
+
+    The map displays:
+    - Relative district outbreak-risk categories
+    - Predicted outbreak probabilities
+    - Incidence and environmental indicators
+    - Getis-Ord Gi* hotspot intelligence
+    - Local Moran's I cluster information
+    - County boundaries and labels
+    """
 
     # --------------------------------
-    # Load GeoAI layers
+    # Confirm source files exist
     # --------------------------------
 
-    district_gdf = gpd.read_file(
-        "data/demo_geoai_spatial_intelligence.geojson"
+    if not DISTRICT_FILE.exists():
+        raise FileNotFoundError(
+            f"District GeoJSON not found: {DISTRICT_FILE}"
+        )
+
+    if not COUNTY_FILE.exists():
+        raise FileNotFoundError(
+            f"County GeoJSON not found: {COUNTY_FILE}"
+        )
+
+    # --------------------------------
+    # Load final GeoAI layers
+    # --------------------------------
+
+    district_gdf = gpd.read_file(DISTRICT_FILE)
+    county_gdf = gpd.read_file(COUNTY_FILE)
+
+    # --------------------------------
+    # Validate required fields
+    # --------------------------------
+
+    required_district_fields = [
+        "adm2_pcode",
+        "adm2_name",
+        "adm1_name",
+        "Predicted_Probability",
+        "Risk_Level",
+        "Rainfall_mm",
+        "Temperature_C",
+        "Incidence_100k",
+        "GiZScore",
+        "GiPValue",
+        "LISA_cluster",
+        "LISA_ZScore",
+        "LISA_PValue",
+        "geometry"
+    ]
+
+    validate_fields(
+        district_gdf,
+        required_district_fields,
+        "District GeoAI layer"
     )
 
-    county_gdf = gpd.read_file(
-        "data/demo_lbr_admin1.geojson"
+    validate_fields(
+        county_gdf,
+        ["adm1_name", "geometry"],
+        "County boundary layer"
     )
 
     # --------------------------------
-    # Clean timestamp/object fields
+    # Ensure web-map coordinate system
     # --------------------------------
 
-    for gdf in [district_gdf, county_gdf]:
+    if district_gdf.crs is None:
+        district_gdf = district_gdf.set_crs(
+            "EPSG:4326",
+            allow_override=True
+        )
+    elif district_gdf.crs.to_epsg() != 4326:
+        district_gdf = district_gdf.to_crs("EPSG:4326")
 
-        for col in gdf.columns:
-
-            if col != "geometry":
-
-                gdf[col] = gdf[col].apply(
-                    lambda x: str(x)
-                    if hasattr(x, "isoformat")
-                    else x
-                )
+    if county_gdf.crs is None:
+        county_gdf = county_gdf.set_crs(
+            "EPSG:4326",
+            allow_override=True
+        )
+    elif county_gdf.crs.to_epsg() != 4326:
+        county_gdf = county_gdf.to_crs("EPSG:4326")
 
     # --------------------------------
-    # Standardize LISA labels
+    # Standardise text fields
+    # --------------------------------
+
+    text_fields = [
+        "adm2_pcode",
+        "adm2_name",
+        "adm1_name",
+        "Risk_Level",
+        "LISA_cluster"
+    ]
+
+    for field in text_fields:
+        district_gdf[field] = (
+            district_gdf[field]
+            .fillna("")
+            .astype(str)
+            .str.strip()
+        )
+
+    district_gdf["Risk_Level"] = (
+        district_gdf["Risk_Level"]
+        .replace(
+            {
+                "Low": "Low Risk",
+                "Moderate": "Moderate Risk",
+                "High": "High Risk"
+            }
+        )
+        .replace("", "Not Available")
+    )
+
+    # --------------------------------
+    # Convert analytical fields to numeric
+    # --------------------------------
+
+    numeric_fields = [
+        "Predicted_Probability",
+        "Rainfall_mm",
+        "Temperature_C",
+        "Incidence_100k",
+        "GiZScore",
+        "GiPValue",
+        "LISA_ZScore",
+        "LISA_PValue"
+    ]
+
+    for field in numeric_fields:
+        district_gdf[field] = pd.to_numeric(
+            district_gdf[field],
+            errors="coerce"
+        )
+
+    # --------------------------------
+    # Standardise LISA labels
     # --------------------------------
 
     district_gdf["LISA_cluster"] = (
         district_gdf["LISA_cluster"]
-        .replace("", "Not Significant")
+        .replace(
+            {
+                "": "Not Significant",
+                "nan": "Not Significant",
+                "None": "Not Significant"
+            }
+        )
         .fillna("Not Significant")
     )
 
@@ -62,124 +253,163 @@ def create_geoai_map():
         "HL": "High-Low Outlier",
         "LH": "Low-High Outlier",
         "LL": "Low-Low Cluster",
+        "High-High": "High-High Cluster",
+        "High-Low": "High-Low Outlier",
+        "Low-High": "Low-High Outlier",
+        "Low-Low": "Low-Low Cluster",
         "Not Significant": "Not Significant"
     }
 
     district_gdf["LISA_cluster_Display"] = (
         district_gdf["LISA_cluster"]
         .map(lisa_labels)
-        .fillna("Not Significant")
+        .fillna(district_gdf["LISA_cluster"])
     )
 
     # --------------------------------
-    # Create hotspot intelligence field
+    # Create hotspot classification
     # --------------------------------
 
-    if (
-        "GiZScore" in district_gdf.columns
-        and "GiPValue" in district_gdf.columns
-    ):
-
-        district_gdf["Hotspot_Class"] = district_gdf.apply(
-            lambda row: classify_hotspot(
-                float(row["GiZScore"]),
-                float(row["GiPValue"])
-            ),
-            axis=1
-        )
-
-        district_gdf["GiZScore_Display"] = (
-            district_gdf["GiZScore"]
-            .astype(float)
-            .apply(lambda x: f"{x:.4f}")
-        )
-
-        district_gdf["GiPValue_Display"] = (
-            district_gdf["GiPValue"]
-            .astype(float)
-            .apply(lambda x: f"{x:.6f}")
-        )
-
-    else:
-
-        district_gdf["Hotspot_Class"] = "Not Available"
-        district_gdf["GiZScore_Display"] = "Not Available"
-        district_gdf["GiPValue_Display"] = "Not Available"
-
-    # --------------------------------
-    # Format display fields
-    # --------------------------------
-
-    district_gdf["Outbreak_Probability_Display"] = (
-        district_gdf["Outbreak_Probability"]
-        .astype(float)
-        .apply(lambda x: f"{x:.6f}")
+    district_gdf["Hotspot_Class"] = district_gdf.apply(
+        lambda row: classify_hotspot(
+            row["GiZScore"],
+            row["GiPValue"]
+        ),
+        axis=1
     )
 
-    district_gdf["Cum_Incidence_100k_Display"] = (
-        district_gdf["Cum_Incidence_100k"]
-        .astype(float)
-        .apply(lambda x: f"{x:.6f}")
+    # --------------------------------
+    # Create display fields
+    # --------------------------------
+
+    district_gdf["Predicted_Probability_Display"] = (
+        district_gdf["Predicted_Probability"]
+        .apply(
+            lambda value: format_numeric(
+                value,
+                decimals=6
+            )
+        )
+    )
+
+    district_gdf["Predicted_Probability_Percent"] = (
+        district_gdf["Predicted_Probability"]
+        .apply(
+            lambda value: format_numeric(
+                value * 100
+                if pd.notna(value)
+                else value,
+                decimals=2,
+                suffix="%"
+            )
+        )
+    )
+
+    district_gdf["Incidence_100k_Display"] = (
+        district_gdf["Incidence_100k"]
+        .apply(
+            lambda value: format_numeric(
+                value,
+                decimals=2
+            )
+        )
     )
 
     district_gdf["Rainfall_mm_Display"] = (
         district_gdf["Rainfall_mm"]
-        .astype(float)
-        .apply(lambda x: f"{x:.2f}")
+        .apply(
+            lambda value: format_numeric(
+                value,
+                decimals=2
+            )
+        )
     )
 
     district_gdf["Temperature_C_Display"] = (
         district_gdf["Temperature_C"]
-        .astype(float)
-        .apply(lambda x: f"{x:.2f}")
+        .apply(
+            lambda value: format_numeric(
+                value,
+                decimals=2
+            )
+        )
+    )
+
+    district_gdf["GiZScore_Display"] = (
+        district_gdf["GiZScore"]
+        .apply(
+            lambda value: format_numeric(
+                value,
+                decimals=4
+            )
+        )
+    )
+
+    district_gdf["GiPValue_Display"] = (
+        district_gdf["GiPValue"]
+        .apply(
+            lambda value: format_numeric(
+                value,
+                decimals=6
+            )
+        )
+    )
+
+    district_gdf["LISA_ZScore_Display"] = (
+        district_gdf["LISA_ZScore"]
+        .apply(
+            lambda value: format_numeric(
+                value,
+                decimals=4
+            )
+        )
+    )
+
+    district_gdf["LISA_PValue_Display"] = (
+        district_gdf["LISA_PValue"]
+        .apply(
+            lambda value: format_numeric(
+                value,
+                decimals=6
+            )
+        )
     )
 
     # --------------------------------
-    # Format LISA statistics
+    # Clean unsupported object values
     # --------------------------------
 
-    if "LISA_ZScore" in district_gdf.columns:
+    for gdf in [district_gdf, county_gdf]:
+        for column in gdf.columns:
+            if column == "geometry":
+                continue
 
-        district_gdf["LISA_ZScore_Display"] = (
-            district_gdf["LISA_ZScore"]
-            .astype(float)
-            .apply(lambda x: f"{x:.4f}")
-        )
-
-    else:
-
-        district_gdf["LISA_ZScore_Display"] = "Not Available"
-
-    if "LISA_PValue" in district_gdf.columns:
-
-        district_gdf["LISA_PValue_Display"] = (
-            district_gdf["LISA_PValue"]
-            .astype(float)
-            .apply(lambda x: f"{x:.6f}")
-        )
-
-    else:
-
-        district_gdf["LISA_PValue_Display"] = "Not Available"
+            gdf[column] = gdf[column].apply(
+                lambda value: value.isoformat()
+                if hasattr(value, "isoformat")
+                else value
+            )
 
     # --------------------------------
     # Create Folium map
     # --------------------------------
 
-    m = folium.Map(
+    geoai_map = folium.Map(
         location=[6.5, -9.5],
         zoom_start=7,
-        tiles="CartoDB positron"
+        tiles="CartoDB positron",
+        control_scale=True
     )
 
     # --------------------------------
-    # Risk classification colors
+    # Risk-classification colours
     # --------------------------------
 
     risk_colors = {
         "Low Risk": "#2ECC71",
         "Moderate Risk": "#F39C12",
-        "High Risk": "#E74C3C"
+        "High Risk": "#E74C3C",
+        "Not Available": "#808080"
     }
 
     # --------------------------------
@@ -188,39 +418,33 @@ def create_geoai_map():
 
     folium.GeoJson(
         district_gdf,
-        name="District Risk Layer",
-
+        name="Relative District Outbreak Risk",
+        show=True,
         style_function=lambda feature: {
-
             "fillColor": risk_colors.get(
-                feature["properties"].get("Risk_Level"),
+                feature["properties"].get(
+                    "Risk_Level",
+                    "Not Available"
+                ),
                 "#808080"
             ),
-
             "color": "#555555",
-
-            "weight": 0.4,
-
-            "fillOpacity": 0.72,
+            "weight": 0.5,
+            "fillOpacity": 0.72
         },
-
         highlight_function=lambda feature: {
-
-            "weight": 2,
-
+            "weight": 2.0,
             "color": "#000000",
-
-            "fillOpacity": 0.85,
+            "fillOpacity": 0.88
         },
-
         tooltip=folium.GeoJsonTooltip(
-
             fields=[
                 "adm2_name",
                 "adm1_name",
                 "Risk_Level",
-                "Outbreak_Probability_Display",
-                "Cum_Incidence_100k_Display",
+                "Predicted_Probability_Display",
+                "Predicted_Probability_Percent",
+                "Incidence_100k_Display",
                 "Rainfall_mm_Display",
                 "Temperature_C_Display",
                 "Hotspot_Class",
@@ -230,53 +454,51 @@ def create_geoai_map():
                 "GiZScore_Display",
                 "GiPValue_Display"
             ],
-
             aliases=[
                 "District",
                 "County",
-                "Risk Level",
-                "Outbreak Probability",
-                "Cumulative Incidence per 100k",
+                "Relative Risk Category",
+                "Predicted Probability (0–1)",
+                "Predicted Probability (%)",
+                "Incidence per 100k",
                 "Rainfall (mm)",
                 "Temperature (°C)",
-                "Hotspot Intelligence",
+                "Getis-Ord Gi* Classification",
                 "Local Moran's I Cluster",
                 "LISA Z-Score",
                 "LISA P-Value",
                 "Gi* Z-Score",
                 "Gi* P-Value"
             ],
-
             localize=True,
-            sticky=True
+            sticky=True,
+            labels=True,
+            style=(
+                "background-color: white; "
+                "color: #222222; "
+                "font-family: Arial; "
+                "font-size: 12px; "
+                "padding: 8px;"
+            )
         )
-
-    ).add_to(m)
+    ).add_to(geoai_map)
 
     # --------------------------------
     # County boundary layer
     # --------------------------------
 
     folium.GeoJson(
-
         county_gdf,
-
         name="County Boundaries",
-
+        show=True,
         style_function=lambda feature: {
-
             "fillColor": "transparent",
-
             "color": "#5A0000",
-
             "weight": 1.4,
-
-            "fillOpacity": 0,
+            "fillOpacity": 0
         },
-
         interactive=False
-
-    ).add_to(m)
+    ).add_to(geoai_map)
 
     # --------------------------------
     # County labels
@@ -285,37 +507,50 @@ def create_geoai_map():
     county_label_col = "adm1_name"
 
     for _, row in county_gdf.iterrows():
+        if row.geometry is None or row.geometry.is_empty:
+            continue
 
-        centroid = row.geometry.centroid
+        label_point = row.geometry.representative_point()
+
+        county_name = str(
+            row.get(
+                county_label_col,
+                ""
+            )
+        ).strip()
 
         folium.Marker(
-
-            location=[centroid.y, centroid.x],
-
+            location=[
+                label_point.y,
+                label_point.x
+            ],
             icon=folium.DivIcon(
-
                 html=f"""
                 <div style="
                     font-size: 11px;
                     font-weight: bold;
                     color: #5A0000;
-                    text-shadow: 1px 1px 2px white;
+                    text-shadow:
+                        -1px -1px 0 white,
+                         1px -1px 0 white,
+                        -1px  1px 0 white,
+                         1px  1px 0 white;
                     pointer-events: none;
                     white-space: nowrap;
-                    ">
-                    {row[county_label_col]}
+                    transform: translate(-50%, -50%);
+                ">
+                    {county_name}
                 </div>
                 """
             )
-
-        ).add_to(m)
+        ).add_to(geoai_map)
 
     # --------------------------------
-    # Layer controls
+    # Layer control
     # --------------------------------
 
     folium.LayerControl(
         collapsed=False
-    ).add_to(m)
+    ).add_to(geoai_map)
 
-    return m
+    return geoai_map
