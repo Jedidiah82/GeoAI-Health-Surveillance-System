@@ -105,6 +105,21 @@ def load_data():
     ).reset_index(drop=True)
 
 
+def _normalise_relative_risk_label(value):
+    """Return consistent relative-risk terminology for dashboard display."""
+    labels = {
+        "Low Risk": "Lower Relative Risk",
+        "Lower Risk": "Lower Relative Risk",
+        "Lower Relative Risk": "Lower Relative Risk",
+        "Moderate Risk": "Moderate Relative Risk",
+        "Moderate Relative Risk": "Moderate Relative Risk",
+        "High Risk": "Higher Relative Risk",
+        "Higher Risk": "Higher Relative Risk",
+        "Higher Relative Risk": "Higher Relative Risk",
+    }
+    return labels.get(str(value).strip(), str(value).strip())
+
+
 @st.cache_data
 def load_latest_predictions():
     """Load the latest district predictions used by the maps and dashboard."""
@@ -131,6 +146,10 @@ def load_latest_predictions():
             + ", ".join(missing)
         )
 
+    latest["Relative_Risk_Level"] = latest["Risk_Level"].apply(
+        _normalise_relative_risk_label
+    )
+
     return latest.sort_values(
         "Predicted_Probability",
         ascending=False,
@@ -145,7 +164,6 @@ latest_df = load_latest_predictions()
 # Operational Summary Metrics
 # --------------------------------
 
-high_risk_count = (latest_df["Risk_Level"] == "High Risk").sum()
 avg_risk_score = latest_df["Predicted_Probability"].mean()
 avg_risk_score_pct = avg_risk_score * 100
 
@@ -183,13 +201,13 @@ latest_data_period = (
 m1, m2, m3, m4, m5 = st.columns(5)
 
 with m1:
-    st.metric("Top Risk Districts", 10)
+    st.metric("Top Ranked Districts", 10)
     st.caption(
-        "Operational ranking of the ten districts with the highest current predicted outbreak probabilities."
+        "Operational ranking of the ten districts with the highest latest predicted outbreak probabilities."
     )
 
 with m2:
-    st.metric("Average Risk Score", f"{avg_risk_score_pct:.2f}%")
+    st.metric("Mean Predicted Probability", f"{avg_risk_score_pct:.2f}%")
     st.caption(
         "Mean predicted outbreak probability across the latest district records. "
         "Displayed as a percentage; higher values indicate greater average predicted outbreak risk."
@@ -199,7 +217,7 @@ with m3:
     st.metric("Active Hotspots", active_hotspots)
     st.caption(
         "Number of districts identified as spatial hotspots using hotspot-intelligence outputs. "
-        "This is different from the Top Risk Districts ranking."
+        "This is distinct from the Top Ranked Districts probability ranking."
     )
 
 with m4:
@@ -222,7 +240,7 @@ st.sidebar.markdown("""
 
 Use this dashboard to explore:
 
-* District-level outbreak-risk information
+* District-level predicted outbreak probabilities and relative-risk categories
 * Spatial hotspot intelligence
 * Explainable AI insights
 * Model performance summaries
@@ -265,47 +283,44 @@ selected_district = st.sidebar.selectbox(
 county_districts
 )
 
-top_risk = (
+top_ranked = (
     latest_df
       .sort_values(by="Predicted_Probability", ascending=False)
       .head(10)
       .copy()
 )
 
-st.subheader("Top Risk Districts")
+st.subheader("Top Ranked Districts by Predicted Probability")
 
 st.caption(
-    "This table ranks the ten districts with the highest current predicted outbreak probabilities. "
-    "It supports surveillance prioritisation and should not be interpreted as identical to the High-, "
-    "Moderate-, and Low-Risk categories shown on the risk-classification map."
+    "This table ranks the ten districts with the highest latest predicted outbreak probabilities. "
+    "It is an operational prioritisation tool and is distinct from the relative-risk categories "
+    "shown on the classification map."
 )
 
-top_risk_display = top_risk.rename(
+top_ranked_display = top_ranked.rename(
     columns={
         "adm2_name": "District",
         "adm1_name": "County",
         "Predicted_Probability": "Predicted Outbreak Probability (0–1)",
-        "Risk_Level": "Surveillance Risk Level"
     }
 )[[
     "District",
     "County",
     "Predicted Outbreak Probability (0–1)",
-    "Surveillance Risk Level"
 ]]
 
-top_risk_display["Predicted Outbreak Probability (%)"] = (
-    top_risk_display["Predicted Outbreak Probability (0–1)"] * 100
+top_ranked_display["Predicted Outbreak Probability (%)"] = (
+    top_ranked_display["Predicted Outbreak Probability (0–1)"] * 100
 ).round(2)
 
 st.dataframe(
-    top_risk_display[
+    top_ranked_display[
         [
             "District",
             "County",
             "Predicted Outbreak Probability (0–1)",
             "Predicted Outbreak Probability (%)",
-            "Surveillance Risk Level"
         ]
     ],
     width="stretch"
@@ -340,53 +355,42 @@ col1, col2, col3, col4 = st.columns(4)
 
 col1.metric("District", latest_record["adm2_name"])
 col2.metric("County", latest_record["adm1_name"])
-col3.metric("Outbreak Probability", f"{latest_record['Predicted_Probability'] * 100:.2f}%")
-col4.metric("Risk Level", latest_record["Risk_Level"])
+col3.metric("Predicted Probability", f"{latest_record['Predicted_Probability'] * 100:.2f}%")
+col4.metric("Relative Risk Category", latest_record["Relative_Risk_Level"])
 
 
-with st.expander("How are risk levels interpreted?"):
+with st.expander("How are the GeoAI risk outputs interpreted?"):
 
     st.markdown("""
 ### GeoAI Risk Outputs
 
-The dashboard presents GeoAI risk outputs in three complementary ways:
+The dashboard presents the model outputs in three complementary ways:
 
 - **Predicted Outbreak Probability**
-  - A model-generated probability ranging from 0 to 1.
-  - Higher values indicate greater predicted outbreak risk.
+  - A model-estimated probability ranging from 0 to 1.
+  - It represents the estimated likelihood that a district-month observation belongs to the outbreak-risk class.
 
-- **Surveillance Risk Level**
-  - Districts are grouped into **Low**, **Moderate**, and **High Risk** categories using tertiles of the latest predicted probabilities across all 136 districts.
-  - These categories represent relative levels of predicted risk across districts rather than fixed epidemiological thresholds.
-  - The resulting classifications are displayed on the GeoAI Risk Classification Map.
+- **Relative Risk Category**
+  - Districts are grouped into **Lower Relative Risk**, **Moderate Relative Risk**, and **Higher Relative Risk** categories using tertiles of the latest predicted probabilities across all 136 districts.
+  - These categories indicate relative position within the national probability distribution and are not fixed epidemiological outbreak thresholds.
 
-- **Top Risk Districts**
-  - An operational ranking of districts with the highest current predicted outbreak probabilities.
-  - This ranking supports surveillance prioritisation and resource allocation.
-
-### Understanding the Difference
-
-The **GeoAI Risk Classification Map** groups all districts into Low-, Moderate-, and High-Risk categories based on tertiles of the latest predicted probabilities.
-
-The **Top Risk Districts** table ranks districts according to their current predicted outbreak probabilities and displays only the highest-ranked districts.
-
-Therefore, a district may appear in the Top Risk Districts table because it ranks among the highest current probabilities, while the GeoAI Risk Classification Map provides a broader categorisation of risk across all districts.
+- **Top Ranked Districts**
+  - Districts are ordered by their latest predicted probabilities.
+  - This ranking supports comparative surveillance prioritisation and resource allocation.
 
 ### Operational Interpretation
 
-#### High Risk
-- Immediate surveillance attention recommended.
-- Review outbreak indicators and hotspot intelligence.
-- Consider escalation and resource mobilisation where appropriate.
+#### Higher Relative Risk
+- Prioritise review of current surveillance indicators and hotspot intelligence.
+- Consider enhanced monitoring and field verification where supported by additional evidence.
 
-#### Moderate Risk
-- Enhanced monitoring recommended.
-- Review trend direction and recent surveillance indicators.
-- Prepare escalation if risk increases.
+#### Moderate Relative Risk
+- Continue enhanced review of trends and recent surveillance indicators.
+- Prepare escalation if probability, case activity, or hotspot evidence increases.
 
-#### Low Risk
-- Routine surveillance recommended.
-- Continue periodic monitoring and review.
+#### Lower Relative Risk
+- Continue routine surveillance and periodic review.
+- Reassess if new case activity or spatial hotspot signals emerge.
 """)
 
 # --------------------------------
@@ -395,32 +399,32 @@ Therefore, a district may appear in the Top Risk Districts table because it rank
 
 st.subheader("Recommended Actions")
 
-selected_risk_level = latest_record["Risk_Level"]
+selected_risk_level = latest_record["Relative_Risk_Level"]
 
-if selected_risk_level == "High Risk":
+if selected_risk_level == "Higher Relative Risk":
     st.error("""
-    **High Risk – Recommended Actions**
+    **Higher Relative Risk – Recommended Actions**
 
-    - Initiate immediate surveillance review.
-    - Prioritise field investigation and case verification.
-    - Increase monitoring frequency.
+    - Prioritise review of current surveillance indicators.
     - Review hotspot intelligence and recent case trends.
-    - Prepare targeted resource allocation if risk persists.
+    - Consider field verification where supported by additional evidence.
+    - Increase monitoring frequency if elevated signals persist.
+    - Prepare targeted resource allocation where operationally justified.
     """)
 
-elif selected_risk_level == "Moderate Risk":
+elif selected_risk_level == "Moderate Relative Risk":
     st.warning("""
-    **Moderate Risk – Recommended Actions**
+    **Moderate Relative Risk – Recommended Actions**
 
     - Continue enhanced surveillance monitoring.
     - Review district trend direction and hotspot indicators.
     - Monitor recent case activity and incidence changes.
-    - Prepare escalation if risk increases.
+    - Prepare escalation if risk indicators increase.
     """)
 
 else:
     st.success("""
-    **Low Risk – Recommended Actions**
+    **Lower Relative Risk – Recommended Actions**
 
     - Continue routine surveillance.
     - Maintain periodic monitoring.
@@ -428,10 +432,10 @@ else:
     """)
 
 st.caption(
-    f"Current classification based on GeoAI prediction: "
-    f"{latest_record['Risk_Level']} "
-    f"(Predicted outbreak probability = "
-    f"{latest_record['Predicted_Probability']*100:.2f}%)."
+    f"Current relative-risk category: {latest_record['Relative_Risk_Level']} "
+    f"(latest predicted outbreak probability = "
+    f"{latest_record['Predicted_Probability']*100:.2f}%). "
+    "The category reflects the district's relative position within the national distribution."
 )
 
 latest_two = district_df.sort_values("Date").tail(2)
@@ -451,7 +455,7 @@ if len(latest_two) == 2:
 
     with trend_col1:
         st.metric(
-            "Current Outbreak Probability",
+            "Current Predicted Probability",
             f"{latest_record['Predicted_Probability']*100:.2f}%"
         )
 
@@ -469,7 +473,7 @@ st.subheader("Temporal Outbreak Probability Trend")
 with st.expander("About this trend chart"):
     st.markdown("""
     This chart shows how predicted outbreak probability changes over time
-    for the selected district, supporting trend monitoring and early warning.
+    for the selected district, supporting retrospective trend monitoring and comparative surveillance review.
     """)
 
 trend_fig = px.line(
@@ -491,38 +495,39 @@ st.plotly_chart(trend_fig, width="stretch")
 # Operational Alert Panel
 # --------------------------------
 
-st.subheader("Operational Alert Summary")
+st.subheader("Relative Risk Summary")
 
 st.markdown("""
-This section highlights districts currently exhibiting elevated outbreak risk.
-The alerts support prioritisation of surveillance activities and resource allocation.
+This section summarises the latest relative-risk categories derived from the national distribution of predicted probabilities. The categories support comparative prioritisation and do not represent fixed epidemiological thresholds.
 """)
 
-high_risk_count = latest_df[
-    latest_df["Risk_Level"] == "High Risk"
+higher_relative_count = latest_df[
+    latest_df["Relative_Risk_Level"] == "Higher Relative Risk"
 ].shape[0]
 
-moderate_risk_count = latest_df[
-    latest_df["Risk_Level"] == "Moderate Risk"
+moderate_relative_count = latest_df[
+    latest_df["Relative_Risk_Level"] == "Moderate Relative Risk"
 ].shape[0]
 
-if high_risk_count > 0:
-    st.error(
-        f"{high_risk_count} district(s) are currently classified in the highest relative-risk tertile."
-    )
+lower_relative_count = latest_df[
+    latest_df["Relative_Risk_Level"] == "Lower Relative Risk"
+].shape[0]
 
-if moderate_risk_count > 0:
-    st.warning(
-        f"{moderate_risk_count} district(s) are currently classified in the middle relative-risk tertile."
-    )
-
-if high_risk_count == 0 and moderate_risk_count == 0:
-    st.success("No elevated district-level outbreak risk detected.")
-
-st.info(
-    "The Top Risk Districts table provides a ranking based on predicted outbreak probability and should not be interpreted as equivalent to the High-, Moderate-, and Low-Risk classifications displayed on the GeoAI risk-classification map."
+st.error(
+    f"{higher_relative_count} district(s) are classified as Higher Relative Risk."
+)
+st.warning(
+    f"{moderate_relative_count} district(s) are classified as Moderate Relative Risk."
+)
+st.success(
+    f"{lower_relative_count} district(s) are classified as Lower Relative Risk."
 )
 
+st.info(
+    "The Top Ranked Districts table is a probability-based ranking and should not be "
+    "interpreted as equivalent to the tertile-based relative-risk categories displayed "
+    "on the classification map."
+)
 
 # --------------------------------
 # Interactive GeoAI Map
@@ -531,10 +536,10 @@ st.subheader("Operational GeoAI Spatial Intelligence Map")
 
 with st.expander("About this map"):
     st.markdown("""
-    This interactive map displays district-level outbreak-risk classifications,
-    hotspot intelligence, and spatial surveillance information. Users can explore
-    geographic patterns of predicted outbreak risk and identify locations requiring
-    enhanced surveillance attention.
+    This interactive map displays district-level relative-risk categories,
+    hotspot intelligence, and spatial surveillance information. Users can compare
+    geographic patterns in predicted probabilities and review locations that may warrant
+    additional surveillance attention.
     """)
 
 geoai_map = create_geoai_map()
@@ -553,11 +558,11 @@ legend_template = """
     padding: 10px;
     border-radius: 5px;
 ">
-<b>District Risk Classification</b><br>
-<small>Predicted outbreak-risk category</small><br><br>
-<span style="background:#2ECC71;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Low Risk<br>
-<span style="background:#F39C12;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Moderate Risk<br>
-<span style="background:#E74C3C;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>High Risk
+<b>Relative District Risk Classification</b><br>
+<small>Tertile-based relative category</small><br><br>
+<span style="background:#2ECC71;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Lower Relative Risk<br>
+<span style="background:#F39C12;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Moderate Relative Risk<br>
+<span style="background:#E74C3C;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Higher Relative Risk
 </div>
 {% endmacro %}
 """
@@ -792,12 +797,10 @@ model_results_path = _first_existing_path([
 
 model_results = pd.read_csv(model_results_path)
 
-model_results = pd.read_csv(model_results_path)
-
 model_results_display = model_results.rename(
     columns={
         "ROC_AUC": "Overall Prediction Performance (ROC-AUC)",
-        "Precision": "Accuracy of High-Risk Alerts (Precision)",
+        "Precision": "Positive Alert Precision",
         "Recall": "Ability to Detect Outbreaks (Recall)",
         "F1_Score": "Overall Detection Balance (F1-Score)"
     }
@@ -808,8 +811,8 @@ with st.expander("About model confidence and validation"):
     This section presents the performance of the evaluated prediction models.
 
     The results demonstrate how accurately the GeoAI framework identifies
-    districts at elevated outbreak risk and provide evidence supporting
-    the reliability of the surveillance system.
+    outbreak-risk observations within the internal test dataset and provide
+    proof-of-concept evidence for comparative model evaluation.
     """)
 
 st.dataframe(
@@ -829,8 +832,8 @@ st.success(
 )
 
 st.caption("""
-Metric guide: Overall Prediction Performance shows how well the model separates higher-risk
-from lower-risk districts. Accuracy of High-Risk Alerts indicates how reliable high-risk warnings are.
+Metric guide: Overall Prediction Performance shows how well the model separates outbreak-risk
+from non-outbreak observations. Positive Alert Precision indicates the proportion of positive classifications that were correct.
 Ability to Detect Outbreaks shows how well the model identifies outbreak-risk cases.
 Overall Detection Balance combines alert reliability and outbreak detection.
 """)
@@ -843,28 +846,28 @@ was not estimated in this prototype and is recommended for future enhancement.
 
 
 # -----------------------------
-# Risk Level Distribution
+# Relative Risk Category Distribution
 # -----------------------------
-st.subheader("Risk Level Distribution")
+st.subheader("Relative Risk Category Distribution")
 
-with st.expander("About risk level distribution"):
+with st.expander("About relative risk category distribution"):
     st.markdown("""
-    This summary displays the current distribution of district outbreak-risk
-    classifications across Liberia.
+    This summary displays the distribution of the latest tertile-based relative-risk
+    categories across Liberia.
     """)
 
-risk_counts = latest_df["Risk_Level"].value_counts().reset_index()
-risk_counts.columns = ["Risk Level", "District Count"]
+risk_counts = latest_df["Relative_Risk_Level"].value_counts().reset_index()
+risk_counts.columns = ["Relative Risk Category", "District Count"]
 
 risk_fig = px.bar(
     risk_counts,
-    x="Risk Level",
+    x="Relative Risk Category",
     y="District Count",
-    title="Latest District Risk Classification Summary"
+    title="Latest District Relative Risk Classification Summary"
 )
 
 risk_fig.update_layout(
-    xaxis_title="Risk Level",
+    xaxis_title="Relative Risk Category",
     yaxis_title="Number of Districts"
 )
 
@@ -965,8 +968,8 @@ with st.expander("About this surveillance data table"):
     """)
 
 st.caption(
-    f"Current relative surveillance category for {selected_district}: "
-    f"{latest_record['Risk_Level']}."
+    f"Current relative-risk category for {selected_district}: "
+    f"{latest_record['Relative_Risk_Level']}."
 )
 
 display_df = district_df[
@@ -995,8 +998,7 @@ display_df = display_df.rename(
         "Incidence_100k": "Incidence per 100k",
         "Rainfall_mm": "Rainfall (mm)",
         "Temperature_C": "Temperature (°C)",
-        "Predicted_Probability": "Predicted Outbreak Probability (0–1)",
-        "Risk_Level": "Surveillance Risk Level"
+        "Predicted_Probability": "Predicted Outbreak Probability (0–1)"
     }
 )
 
