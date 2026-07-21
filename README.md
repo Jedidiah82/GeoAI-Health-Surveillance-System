@@ -172,6 +172,10 @@ The architecture consists of the following layers:
 
 ![GeoAI Risk Classification Map](figures/risk_map.png)
 
+### Observed COVID-19 Incidence Hotspots Before and After False Discovery Rate Correction in Liberia
+
+![Observed COVID-19 Incidence Hotspots Before and After False Discovery Rate Correction in Liberia](figures/Traditional Hotspot Analysis Map (Getis-Ord Gi).png)
+
 ### Hotspot Intelligence
 
 ![Hotspot Intelligence](figures/hotspot_intelligence.png)
