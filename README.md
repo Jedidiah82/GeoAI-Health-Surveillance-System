@@ -174,7 +174,7 @@ The architecture consists of the following layers:
 
 ### Observed COVID-19 Incidence Hotspots Before and After False Discovery Rate Correction in Liberia
 
-![Observed COVID-19 Incidence Hotspots Before and After False Discovery Rate Correction in Liberia](figures/Traditional Hotspot Analysis Map (Getis-Ord Gi).png)
+![Observed COVID-19 Incidence Hotspots Before and After False Discovery Rate Correction in Liberia](figures/Traditional_Hotspot_Analysis_Map.png)
 
 ### Hotspot Intelligence
 
