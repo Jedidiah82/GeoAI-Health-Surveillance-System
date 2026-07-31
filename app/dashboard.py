@@ -120,6 +120,60 @@ def _normalise_relative_risk_label(value):
     return labels.get(str(value).strip(), str(value).strip())
 
 
+def _find_column(frame, candidates):
+    """Return the first available column from a list of possible names."""
+    lookup = {str(column).casefold(): column for column in frame.columns}
+    for candidate in candidates:
+        if candidate.casefold() in lookup:
+            return lookup[candidate.casefold()]
+    return None
+
+
+def _normalise_text(value):
+    """Normalise labels for resilient district and county matching."""
+    return " ".join(str(value).strip().casefold().split())
+
+
+def _classify_hotspot(zscore, pvalue):
+    """Classify a district using the study's 95% Getis-Ord Gi* threshold."""
+    zscore = pd.to_numeric(zscore, errors="coerce")
+    pvalue = pd.to_numeric(pvalue, errors="coerce")
+
+    if pd.isna(zscore) or pd.isna(pvalue):
+        return "Not Available"
+    if pvalue <= 0.05 and zscore >= 1.960:
+        return "Hotspot"
+    if pvalue <= 0.05 and zscore <= -1.960:
+        return "Coldspot"
+    return "Not Significant"
+
+
+def _hotspot_confidence(zscore, pvalue):
+    """Report whether a Gi* result meets the study's 95% threshold."""
+    zscore = pd.to_numeric(zscore, errors="coerce")
+    pvalue = pd.to_numeric(pvalue, errors="coerce")
+
+    if pd.isna(zscore) or pd.isna(pvalue):
+        return "Not available"
+    absolute_z = abs(zscore)
+    if pvalue <= 0.05 and absolute_z >= 1.960:
+        return "95%"
+    return "Not significant"
+
+
+def _hotspot_status_label(hotspot_class, zscore, pvalue):
+    """Return an accessible badge using text as well as colour."""
+    confidence = _hotspot_confidence(zscore, pvalue)
+    if hotspot_class == "Hotspot":
+        marker = "🔴"
+        return f"{marker} Hotspot — {confidence}"
+    if hotspot_class == "Coldspot":
+        return f"🔵 Coldspot — {confidence}"
+    if hotspot_class == "Not Available":
+        return "⚪ Not available"
+    return "⚪ Not significant"
+
+
 @st.cache_data
 def load_latest_predictions():
     """Load the latest district predictions used by the maps and dashboard."""
@@ -156,8 +210,149 @@ def load_latest_predictions():
     ).reset_index(drop=True)
 
 
+@st.cache_data
+def load_hotspot_intelligence(method_version):
+    """Load and standardise GeoAI-derived Getis-Ord Gi* outputs."""
+    # The explicit version participates in Streamlit's cache key. Increment it
+    # whenever the declared hotspot method or classification threshold changes.
+    _ = method_version
+    hotspot_path = DATA_DIR / "GeoAI_District_Risk_Combined.geojson"
+    if not hotspot_path.exists():
+        return gpd.GeoDataFrame()
+
+    hotspot_data = gpd.read_file(hotspot_path)
+    if hotspot_data.empty:
+        return hotspot_data
+
+    column_candidates = {
+        "adm2_pcode": ["adm2_pcode", "ADM2_PCODE", "district_code", "pcode"],
+        "adm2_name": ["adm2_name", "District", "district", "ADM2_EN", "NAME_2"],
+        "adm1_name": ["adm1_name", "County", "county", "ADM1_EN", "NAME_1"],
+        "GiZScore": ["GiZScore", "Gi_ZScore", "GiZ", "z_score", "zscore"],
+        "GiPValue": ["GiPValue", "Gi_PValue", "GiP", "p_value", "pvalue"],
+        "Hotspot_Class": [
+            "Hotspot_Class",
+            "HotspotClass",
+            "Gi_Bin",
+            "GiBin",
+            "hotspot_status",
+        ],
+    }
+    source_columns = {
+        canonical: _find_column(hotspot_data, candidates)
+        for canonical, candidates in column_candidates.items()
+    }
+
+    if source_columns["adm2_name"] is None:
+        return gpd.GeoDataFrame()
+
+    for canonical in ("adm2_pcode", "adm2_name", "adm1_name"):
+        source = source_columns[canonical]
+        if source is not None:
+            hotspot_data[canonical] = hotspot_data[source].astype(str)
+        elif canonical == "adm2_pcode":
+            hotspot_data[canonical] = ""
+        else:
+            hotspot_data[canonical] = "Unavailable"
+
+    for canonical in ("GiZScore", "GiPValue"):
+        source = source_columns[canonical]
+        hotspot_data[canonical] = (
+            pd.to_numeric(hotspot_data[source], errors="coerce")
+            if source is not None
+            else pd.NA
+        )
+
+    if source_columns["GiZScore"] and source_columns["GiPValue"]:
+        hotspot_data["Hotspot_Class"] = hotspot_data.apply(
+            lambda row: _classify_hotspot(
+                row["GiZScore"],
+                row["GiPValue"],
+            ),
+            axis=1,
+        )
+    elif source_columns["Hotspot_Class"]:
+        source_class = hotspot_data[source_columns["Hotspot_Class"]].astype(str)
+        hotspot_data["Hotspot_Class"] = source_class.apply(
+            lambda value: (
+                "Hotspot"
+                if "hot" in value.casefold()
+                and "not" not in value.casefold()
+                and "cold" not in value.casefold()
+                else "Coldspot"
+                if "cold" in value.casefold()
+                else "Not Significant"
+            )
+        )
+    else:
+        hotspot_data["Hotspot_Class"] = "Not Available"
+
+    hotspot_data["Confidence"] = hotspot_data.apply(
+        lambda row: _hotspot_confidence(
+            row["GiZScore"],
+            row["GiPValue"],
+        ),
+        axis=1,
+    )
+    hotspot_data["Spatial_Hotspot_Status"] = hotspot_data.apply(
+        lambda row: _hotspot_status_label(
+            row["Hotspot_Class"],
+            row["GiZScore"],
+            row["GiPValue"],
+        ),
+        axis=1,
+    )
+
+    return hotspot_data
+
+
 df = load_data()
 latest_df = load_latest_predictions()
+hotspot_gdf = load_hotspot_intelligence("geoai_gi_95_v1")
+if hotspot_gdf.empty:
+    detected_hotspots_gdf = gpd.GeoDataFrame()
+else:
+    # Recompute threshold-derived fields after loading as a safeguard against
+    # stale cached labels from an earlier 90%/95%/99% display convention.
+    hotspot_gdf = hotspot_gdf.copy()
+    hotspot_gdf["Hotspot_Class"] = hotspot_gdf.apply(
+        lambda row: _classify_hotspot(
+            row["GiZScore"],
+            row["GiPValue"],
+        ),
+        axis=1,
+    )
+    hotspot_gdf["Confidence"] = hotspot_gdf.apply(
+        lambda row: _hotspot_confidence(
+            row["GiZScore"],
+            row["GiPValue"],
+        ),
+        axis=1,
+    )
+    hotspot_gdf["Spatial_Hotspot_Status"] = hotspot_gdf.apply(
+        lambda row: _hotspot_status_label(
+            row["Hotspot_Class"],
+            row["GiZScore"],
+            row["GiPValue"],
+        ),
+        axis=1,
+    )
+    detected_hotspots_gdf = hotspot_gdf[
+        (hotspot_gdf["Hotspot_Class"] == "Hotspot")
+        & (hotspot_gdf["Confidence"] == "95%")
+    ].copy()
+    detected_hotspots_gdf = detected_hotspots_gdf.sort_values(
+        ["GiZScore", "adm1_name", "adm2_name"],
+        ascending=[False, True, True],
+    )
+    detected_hotspots_gdf = detected_hotspots_gdf.drop_duplicates(
+        subset=["adm2_pcode", "adm2_name", "adm1_name"]
+    ).reset_index(drop=True)
+    detected_hotspots_gdf["Hotspot_Selector_Label"] = (
+        detected_hotspots_gdf["adm2_name"].astype(str)
+        + " — "
+        + detected_hotspots_gdf["adm1_name"].astype(str)
+    )
 
 
 # --------------------------------
@@ -167,23 +362,7 @@ latest_df = load_latest_predictions()
 avg_risk_score = latest_df["Predicted_Probability"].mean()
 avg_risk_score_pct = avg_risk_score * 100
 
-try:
-    hotspot_gdf = gpd.read_file(DATA_DIR / "GeoAI_District_Risk_Combined.geojson")
-
-    if "Hotspot_Class" in hotspot_gdf.columns:
-        active_hotspots = (hotspot_gdf["Hotspot_Class"] == "Hotspot").sum()
-
-    elif "GiZScore" in hotspot_gdf.columns and "GiPValue" in hotspot_gdf.columns:
-        active_hotspots = (
-            (hotspot_gdf["GiPValue"].astype(float) <= 0.05)
-            & (hotspot_gdf["GiZScore"].astype(float) > 1.96)
-        ).sum()
-
-    else:
-        active_hotspots = "N/A"
-
-except Exception:
-    active_hotspots = "N/A"
+detected_hotspot_count = len(detected_hotspots_gdf)
 
 try:
     audit_log = pd.read_csv(LOGS_DIR / "audit_log.csv")
@@ -197,6 +376,7 @@ latest_data_period = (
     if pd.notna(latest_date)
     else "Unavailable"
 )
+hotspot_analysis_period = "Latest Available Spatial Analysis"
 
 m1, m2, m3, m4, m5 = st.columns(5)
 
@@ -214,10 +394,14 @@ with m2:
     )
 
 with m3:
-    st.metric("Active Hotspots", active_hotspots)
+    st.metric(
+        "GeoAI-Derived Spatial Hotspots",
+        detected_hotspot_count if not hotspot_gdf.empty else "N/A",
+    )
     st.caption(
-        "Number of districts identified as spatial hotspots using hotspot-intelligence outputs. "
-        "This is distinct from the Top Ranked Districts probability ranking."
+        "Districts classified by applying Getis-Ord Gi* to the model-derived "
+        "outbreak-risk surface at the study's 95% confidence threshold. These may differ "
+        "from both the probability ranking and traditional incidence hotspots."
     )
 
 with m4:
@@ -231,6 +415,171 @@ with m5:
     st.caption(
         "Most recent surveillance period represented in the dashboard."
     )
+
+
+def _focus_hotspot(source_key="hotspot_drilldown"):
+    """Synchronise the dashboard selectors and map with a hotspot choice."""
+    hotspot_label = st.session_state.get(source_key)
+    if not hotspot_label or hotspot_label.startswith("—"):
+        return
+
+    match = detected_hotspots_gdf[
+        detected_hotspots_gdf["Hotspot_Selector_Label"] == hotspot_label
+    ]
+    if match.empty:
+        return
+
+    selected = match.iloc[0]
+    st.session_state["active_hotspot_label"] = hotspot_label
+    counterpart_key = (
+        "sidebar_hotspot_focus"
+        if source_key == "hotspot_drilldown"
+        else "hotspot_drilldown"
+    )
+    st.session_state[counterpart_key] = hotspot_label
+    st.session_state["pending_county_selector"] = selected["adm1_name"]
+    st.session_state["pending_district_selector"] = selected["adm2_name"]
+    st.session_state["map_focus_district"] = selected["adm2_name"]
+    st.session_state["map_focus_county"] = selected["adm1_name"]
+
+
+def _focus_sidebar_hotspot():
+    """Synchronise from the persistent sidebar hotspot selector."""
+    _focus_hotspot("sidebar_hotspot_focus")
+
+
+def _focus_drilldown_hotspot():
+    """Synchronise from the hotspot drill-down selector."""
+    _focus_hotspot("hotspot_drilldown")
+
+
+def _clear_map_focus():
+    """Return the spatial-intelligence map to its national extent."""
+    st.session_state.pop("map_focus_district", None)
+    st.session_state.pop("map_focus_county", None)
+
+
+hotspot_names = (
+    detected_hotspots_gdf["adm2_name"].tolist()
+    if not detected_hotspots_gdf.empty
+    else []
+)
+hotspot_labels = (
+    detected_hotspots_gdf["Hotspot_Selector_Label"].tolist()
+    if not detected_hotspots_gdf.empty
+    else []
+)
+hotspot_summary_table = pd.DataFrame(
+    columns=[
+        "District",
+        "County",
+        "Spatial Hotspot Status",
+        "Gi* z-score",
+        "p-value",
+        "Confidence",
+    ]
+)
+
+if hotspot_names:
+    st.subheader(
+        f"GeoAI-Derived Spatial Hotspots — {hotspot_analysis_period}"
+    )
+    st.caption(
+        "**Method:** XGBoost predicted outbreak probabilities → "
+        "Getis-Ord Gi* spatial analysis → GeoAI-derived hotspot intelligence."
+    )
+    visible_hotspot_names = hotspot_names[:5]
+    remaining_hotspots = max(
+        0,
+        detected_hotspot_count - len(visible_hotspot_names),
+    )
+    hotspot_summary = " · ".join(
+        f"**{district_name}**"
+        for district_name in visible_hotspot_names
+    )
+    if remaining_hotspots:
+        hotspot_summary += f" · **+{remaining_hotspots} more**"
+
+    st.markdown(hotspot_summary)
+    st.caption(
+        "These districts are identified by applying Getis-Ord Gi* spatial "
+        "analysis to the model-derived outbreak-risk surface. They are "
+        "analytically distinct from both the probability ranking of individual "
+        "districts and the traditional hotspot analysis of observed cumulative "
+        "incidence."
+    )
+
+    hotspot_summary_table = detected_hotspots_gdf[
+        [
+            "adm2_name",
+            "adm1_name",
+            "Spatial_Hotspot_Status",
+            "GiZScore",
+            "GiPValue",
+            "Confidence",
+        ]
+    ].rename(
+        columns={
+            "adm2_name": "District",
+            "adm1_name": "County",
+            "Spatial_Hotspot_Status": "Spatial Hotspot Status",
+            "GiZScore": "Gi* z-score",
+            "GiPValue": "p-value",
+        }
+    )
+    hotspot_summary_table["Gi* z-score"] = (
+        hotspot_summary_table["Gi* z-score"].round(3)
+    )
+    hotspot_summary_table["p-value"] = (
+        hotspot_summary_table["p-value"].round(4)
+    )
+
+    hotspot_details_panel = (
+        st.popover(f"View all {detected_hotspot_count} hotspot districts")
+        if hasattr(st, "popover")
+        else st.expander(
+            f"View all {detected_hotspot_count} hotspot districts"
+        )
+    )
+    with hotspot_details_panel:
+        st.dataframe(
+            hotspot_summary_table,
+            hide_index=True,
+            use_container_width=True,
+        )
+        st.selectbox(
+            "Select a hotspot district",
+            hotspot_labels,
+            key="hotspot_drilldown",
+            on_change=_focus_drilldown_hotspot,
+        )
+        hotspot_action_col, national_view_col = st.columns(2)
+        with hotspot_action_col:
+            st.button(
+                "Focus dashboard and map",
+                on_click=_focus_drilldown_hotspot,
+                use_container_width=True,
+            )
+        with national_view_col:
+            st.button(
+                "Return map to national view",
+                on_click=_clear_map_focus,
+                use_container_width=True,
+            )
+else:
+    st.warning(
+        "No statistically significant GeoAI-derived Gi* hotspot districts "
+        "are available in the current spatial-intelligence output."
+    )
+
+st.info(
+    "**How these outputs differ:** Top Ranked Districts are ordered by "
+    "individual machine-learning predicted outbreak probability. GeoAI-Derived "
+    "Hotspot Districts identify statistically significant spatial concentrations "
+    "in the model-derived outbreak-risk surface. Traditional incidence hotspots "
+    "are calculated separately from observed epidemiological incidence. These "
+    "outputs provide complementary evidence and may identify different districts."
+)
 
 st.sidebar.header("District Selection")
 
@@ -250,6 +599,21 @@ Use this dashboard to explore:
 Select a county and district below to update all charts, indicators, and maps.
 """)
 
+sidebar_hotspot_options = [
+    "— Select a GeoAI-derived hotspot —",
+    *hotspot_labels,
+]
+st.sidebar.selectbox(
+    "Select Hotspot District",
+    sidebar_hotspot_options,
+    key="sidebar_hotspot_focus",
+    on_change=_focus_sidebar_hotspot,
+    help=(
+        "Select a GeoAI-derived Getis-Ord Gi* hotspot to "
+        "synchronise the county, district, and map."
+    ),
+)
+
 # --------------------------------
 
 # County Selection
@@ -258,9 +622,18 @@ Select a county and district below to update all charts, indicators, and maps.
 
 counties = sorted(df["adm1_name"].dropna().unique())
 
+if "pending_county_selector" in st.session_state:
+    st.session_state["county_selector"] = st.session_state.pop(
+        "pending_county_selector"
+    )
+
+if st.session_state.get("county_selector") not in counties:
+    st.session_state["county_selector"] = counties[0]
+
 selected_county = st.sidebar.selectbox(
-"Select County",
-counties
+    "Select County",
+    counties,
+    key="county_selector",
 )
 
 # --------------------------------
@@ -270,17 +643,26 @@ counties
 # --------------------------------
 
 county_districts = sorted(
-df.loc[
-df["adm1_name"] == selected_county,
-"adm2_name"
-]
-.dropna()
-.unique()
+    df.loc[
+        df["adm1_name"] == selected_county,
+        "adm2_name"
+    ]
+    .dropna()
+    .unique()
 )
 
+if "pending_district_selector" in st.session_state:
+    st.session_state["district_selector"] = st.session_state.pop(
+        "pending_district_selector"
+    )
+
+if st.session_state.get("district_selector") not in county_districts:
+    st.session_state["district_selector"] = county_districts[0]
+
 selected_district = st.sidebar.selectbox(
-"Select District",
-county_districts
+    "Select District",
+    county_districts,
+    key="district_selector",
 )
 
 top_ranked = (
@@ -290,39 +672,114 @@ top_ranked = (
       .copy()
 )
 
+hotspot_result_columns = [
+    "Hotspot_Class",
+    "GiZScore",
+    "GiPValue",
+    "Spatial_Hotspot_Status",
+]
+if not hotspot_gdf.empty:
+    usable_pcodes = (
+        hotspot_gdf["adm2_pcode"].fillna("").astype(str).str.strip().ne("")
+    )
+    if usable_pcodes.any():
+        hotspot_lookup = hotspot_gdf[
+            ["adm2_pcode", *hotspot_result_columns]
+        ].drop_duplicates("adm2_pcode")
+        top_ranked = top_ranked.merge(
+            hotspot_lookup,
+            on="adm2_pcode",
+            how="left",
+        )
+    else:
+        hotspot_lookup = hotspot_gdf[
+            ["adm2_name", "adm1_name", *hotspot_result_columns]
+        ].copy()
+        hotspot_lookup["_district_key"] = hotspot_lookup["adm2_name"].map(
+            _normalise_text
+        )
+        hotspot_lookup["_county_key"] = hotspot_lookup["adm1_name"].map(
+            _normalise_text
+        )
+        hotspot_lookup = hotspot_lookup.drop_duplicates(
+            ["_district_key", "_county_key"]
+        )
+        top_ranked["_district_key"] = top_ranked["adm2_name"].map(
+            _normalise_text
+        )
+        top_ranked["_county_key"] = top_ranked["adm1_name"].map(
+            _normalise_text
+        )
+        top_ranked = top_ranked.merge(
+            hotspot_lookup[
+                ["_district_key", "_county_key", *hotspot_result_columns]
+            ],
+            on=["_district_key", "_county_key"],
+            how="left",
+        )
+else:
+    for column in hotspot_result_columns:
+        top_ranked[column] = pd.NA
+
 st.subheader("Top Ranked Districts by Predicted Probability")
 
 st.caption(
     "This table ranks the ten districts with the highest latest predicted outbreak probabilities. "
-    "It is an operational prioritisation tool and is distinct from the relative-risk categories "
-    "shown on the classification map."
+    "It is an operational prioritisation tool. The relative-risk category and spatial-hotspot "
+    "status show how the model ranking compares with the complementary analytical outputs."
 )
 
 top_ranked_display = top_ranked.rename(
     columns={
         "adm2_name": "District",
         "adm1_name": "County",
-        "Predicted_Probability": "Predicted Outbreak Probability (0–1)",
+        "Predicted_Probability": "Predicted Outbreak Probability (0-1)",
+        "Relative_Risk_Level": "Relative Risk Category",
+        "Spatial_Hotspot_Status": "Spatial Hotspot Status",
+        "GiZScore": "Gi* z-score",
+        "GiPValue": "Gi* p-value",
     }
 )[[
     "District",
     "County",
-    "Predicted Outbreak Probability (0–1)",
+    "Predicted Outbreak Probability (0-1)",
+    "Relative Risk Category",
+    "Spatial Hotspot Status",
+    "Gi* z-score",
+    "Gi* p-value",
 ]]
 
 top_ranked_display["Predicted Outbreak Probability (%)"] = (
-    top_ranked_display["Predicted Outbreak Probability (0–1)"] * 100
+    top_ranked_display["Predicted Outbreak Probability (0-1)"] * 100
 ).round(2)
+top_ranked_display["Gi* z-score"] = top_ranked_display["Gi* z-score"].round(4)
+top_ranked_display["Gi* p-value"] = top_ranked_display["Gi* p-value"].round(6)
+top_ranked_display["Spatial Hotspot Status"] = (
+    top_ranked_display["Spatial Hotspot Status"].fillna(
+        "⚪ Not significant"
+    )
+)
+top_ranked_display.insert(
+    0,
+    "Rank",
+    range(1, len(top_ranked_display) + 1),
+)
 
 st.dataframe(
     top_ranked_display[
         [
+            "Rank",
             "District",
             "County",
-            "Predicted Outbreak Probability (0–1)",
+            "Predicted Outbreak Probability (0-1)",
             "Predicted Outbreak Probability (%)",
+            "Relative Risk Category",
+            "Spatial Hotspot Status",
+            "Gi* z-score",
+            "Gi* p-value",
         ]
     ],
+    hide_index=True,
     width="stretch"
 )
 
@@ -338,13 +795,17 @@ end_period = df["Date"].max().strftime("%B %Y")
 st.caption(f"Dataset Coverage Period: {start_period} – {end_period}")
 
 district_df = (
-    df[df["adm2_name"] == selected_district]
+    df[
+        (df["adm2_name"] == selected_district)
+        & (df["adm1_name"] == selected_county)
+    ]
     .sort_values("Date")
     .copy()
 )
 
 latest_record = latest_df[
-    latest_df["adm2_name"] == selected_district
+    (latest_df["adm2_name"] == selected_district)
+    & (latest_df["adm1_name"] == selected_county)
 ].iloc[0]
 
 
@@ -536,21 +997,283 @@ st.subheader("Operational GeoAI Spatial Intelligence Map")
 
 with st.expander("About this map"):
     st.markdown("""
-    This interactive map displays district-level relative-risk categories,
-    hotspot intelligence, and spatial surveillance information. Users can compare
-    geographic patterns in predicted probabilities and review locations that may warrant
-    additional surveillance attention.
+    This map combines model-based relative-risk information with GeoAI-derived
+    Getis-Ord Gi* hotspot intelligence. The hotspot layer represents significant
+    spatial concentrations in the model-derived outbreak-risk surface; it is not
+    the traditional Gi* analysis of observed cumulative incidence. Use the
+    spatial-focus control to show all districts, GeoAI-derived hotspots, or the
+    ten highest predicted-probability districts. Selecting a hotspot synchronises
+    the district details and highlights its location.
     """)
+
+map_filter = st.radio(
+    "Spatial focus",
+    [
+        "All districts",
+        "GeoAI-derived hotspots only",
+        "Top-ranked districts only",
+    ],
+    horizontal=True,
+    help=(
+        "Controls the analytical outline displayed over the underlying "
+        "relative-risk classification map."
+    ),
+)
+
+map_focus_district = st.session_state.get("map_focus_district")
+map_focus_county = st.session_state.get("map_focus_county")
+if map_focus_district and map_focus_county:
+    st.info(
+        f"**Selected hotspot:** {map_focus_district} — {map_focus_county}. "
+        "The district remains highlighted while you compare spatial-focus layers."
+    )
+else:
+    st.caption(
+        "**Selected hotspot:** None. Choose a hotspot from the sidebar or "
+        "the hotspot drill-down above to highlight and zoom to it."
+    )
 
 geoai_map = create_geoai_map()
 
-legend_template = """
-{% macro html(this, kwargs) %}
+# The shared map utility adds its layer control before dashboard-specific
+# overlays exist. Remove it here and recreate one after every overlay has
+# been registered so Leaflet never receives references to undefined layers.
+for child_key, child in list(geoai_map._children.items()):
+    if isinstance(child, folium.map.LayerControl):
+        del geoai_map._children[child_key]
+
+# Suppress the underlying risk choropleth in hotspot-only mode so the
+# GeoAI-derived hotspot pattern remains visually distinct from both the
+# relative-risk classification and traditional incidence hotspot maps.
+for child in geoai_map._children.values():
+    if (
+        getattr(child, "layer_name", None)
+        == "Relative District Outbreak Risk"
+    ):
+        child.show = map_filter != "GeoAI-derived hotspots only"
+
+# Add comparison overlays without changing the shared map utility.
+hotspot_map_gdf = detected_hotspots_gdf.copy()
+if not hotspot_map_gdf.empty and hotspot_map_gdf.crs is None:
+    hotspot_map_gdf = hotspot_map_gdf.set_crs(
+        "EPSG:4326",
+        allow_override=True,
+    )
+elif (
+    not hotspot_map_gdf.empty
+    and hotspot_map_gdf.crs.to_epsg() != 4326
+):
+    hotspot_map_gdf = hotspot_map_gdf.to_crs("EPSG:4326")
+
+if not hotspot_map_gdf.empty:
+    folium.GeoJson(
+        hotspot_map_gdf,
+        name="GeoAI-Derived Gi* Hotspots",
+        show=map_filter == "GeoAI-derived hotspots only",
+        style_function=lambda feature: {
+            "fillColor": "#C0392B",
+            "color": "#8E0000",
+            "weight": 3.5,
+            "fillOpacity": 0.10,
+            "dashArray": "7, 4",
+        },
+        highlight_function=lambda feature: {
+            "color": "#000000",
+            "weight": 5,
+            "fillOpacity": 0.22,
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=[
+                "adm2_name",
+                "adm1_name",
+                "Spatial_Hotspot_Status",
+                "GiZScore",
+                "GiPValue",
+                "Confidence",
+            ],
+            aliases=[
+                "District",
+                "County",
+                "Gi* status",
+                "Gi* z-score",
+                "Gi* p-value",
+                "Confidence",
+            ],
+            sticky=True,
+        ),
+    ).add_to(geoai_map)
+
+top_ranked_map_gdf = gpd.GeoDataFrame()
+if not hotspot_gdf.empty:
+    usable_pcodes = (
+        hotspot_gdf["adm2_pcode"].fillna("").astype(str).str.strip().ne("")
+    )
+    if usable_pcodes.any():
+        top_ranked_codes = set(top_ranked["adm2_pcode"])
+        top_ranked_map_gdf = hotspot_gdf[
+            hotspot_gdf["adm2_pcode"].isin(top_ranked_codes)
+        ].copy()
+    else:
+        top_ranked_keys = {
+            (
+                _normalise_text(row["adm2_name"]),
+                _normalise_text(row["adm1_name"]),
+            )
+            for _, row in top_ranked.iterrows()
+        }
+        top_ranked_map_gdf = hotspot_gdf[
+            hotspot_gdf.apply(
+                lambda row: (
+                    _normalise_text(row["adm2_name"]),
+                    _normalise_text(row["adm1_name"]),
+                )
+                in top_ranked_keys,
+                axis=1,
+            )
+        ].copy()
+
+if not top_ranked_map_gdf.empty and top_ranked_map_gdf.crs is None:
+    top_ranked_map_gdf = top_ranked_map_gdf.set_crs(
+        "EPSG:4326",
+        allow_override=True,
+    )
+elif (
+    not top_ranked_map_gdf.empty
+    and top_ranked_map_gdf.crs.to_epsg() != 4326
+):
+    top_ranked_map_gdf = top_ranked_map_gdf.to_crs("EPSG:4326")
+
+if not top_ranked_map_gdf.empty:
+    folium.GeoJson(
+        top_ranked_map_gdf,
+        name="Top 10 Probability-Ranked Districts",
+        show=map_filter == "Top-ranked districts only",
+        style_function=lambda feature: {
+            "fillColor": "transparent",
+            "color": "#1565C0",
+            "weight": 3,
+            "fillOpacity": 0,
+        },
+        tooltip=folium.GeoJsonTooltip(
+            fields=[
+                "adm2_name",
+                "adm1_name",
+                "Spatial_Hotspot_Status",
+            ],
+            aliases=[
+                "District",
+                "County",
+                "Gi* status",
+            ],
+            sticky=True,
+        ),
+    ).add_to(geoai_map)
+
+if map_focus_district:
+    focus_gdf = hotspot_map_gdf[
+        (hotspot_map_gdf["adm2_name"] == map_focus_district)
+        & (
+            (hotspot_map_gdf["adm1_name"] == map_focus_county)
+            if map_focus_county
+            else True
+        )
+    ].copy()
+
+    if not focus_gdf.empty:
+        selected_row = focus_gdf.iloc[0]
+        prediction_match = latest_df[
+            latest_df["adm2_pcode"].astype(str)
+            == str(selected_row["adm2_pcode"])
+        ]
+        if prediction_match.empty:
+            prediction_match = latest_df[
+                latest_df["adm2_name"].map(_normalise_text)
+                == _normalise_text(map_focus_district)
+            ]
+
+        predicted_probability = (
+            f"{prediction_match.iloc[0]['Predicted_Probability'] * 100:.2f}%"
+            if not prediction_match.empty
+            else "Unavailable"
+        )
+        relative_risk = (
+            prediction_match.iloc[0]["Relative_Risk_Level"]
+            if not prediction_match.empty
+            else "Unavailable"
+        )
+        z_text = (
+            f"{float(selected_row['GiZScore']):.3f}"
+            if pd.notna(selected_row["GiZScore"])
+            else "Unavailable"
+        )
+        p_text = (
+            f"{float(selected_row['GiPValue']):.4f}"
+            if pd.notna(selected_row["GiPValue"])
+            else "Unavailable"
+        )
+        popup_html = f"""
+        <b>{selected_row['adm2_name']}</b><br>
+        County: {selected_row['adm1_name']}<br>
+        Predicted probability: {predicted_probability}<br>
+        Relative-risk category: {relative_risk}<br>
+        Gi* result: {selected_row['Spatial_Hotspot_Status']}<br>
+        Gi* z-score: {z_text}<br>
+        p-value: {p_text}<br>
+        Confidence: {selected_row['Confidence']}
+        """
+
+        folium.GeoJson(
+            focus_gdf,
+            name=f"Selected Hotspot: {map_focus_district}",
+            show=True,
+            style_function=lambda feature: {
+                "fillColor": "#FFD600",
+                "color": "#000000",
+                "weight": 5,
+                "fillOpacity": 0.38,
+            },
+            tooltip=folium.Tooltip(
+                f"Selected hotspot: {selected_row['adm2_name']} "
+                f"({selected_row['adm1_name']})"
+            ),
+            popup=folium.Popup(popup_html, max_width=360),
+        ).add_to(geoai_map)
+
+        min_x, min_y, max_x, max_y = focus_gdf.total_bounds
+        geoai_map.fit_bounds(
+            [[min_y, min_x], [max_y, max_x]],
+            padding=(35, 35),
+        )
+
+if not map_focus_district:
+    # Keep the default and reset state tightly framed around Liberia instead
+    # of exposing an unnecessarily broad West African extent.
+    geoai_map.fit_bounds(
+        [[4.20, -11.60], [8.70, -7.30]],
+        padding=(20, 20),
+    )
+
+if map_filter == "GeoAI-derived hotspots only":
+    risk_legend_items = """
+<b>GeoAI-Derived Spatial Hotspots</b><br>
+<small>Gi* analysis of model-derived outbreak risk</small><br><br>
+"""
+else:
+    risk_legend_items = """
+<b>Relative District Risk Classification</b><br>
+<small>Tertile-based relative category</small><br><br>
+<span style="background:#2ECC71;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Lower Relative Risk<br>
+<span style="background:#F39C12;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Moderate Relative Risk<br>
+<span style="background:#E74C3C;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Higher Relative Risk<br><br>
+"""
+
+legend_template = f"""
+{{% macro html(this, kwargs) %}}
 <div style="
     position: absolute;
     bottom: 40px;
     left: 40px;
-    width: 190px;
+    width: 225px;
     background-color: white;
     border: 2px solid grey;
     z-index: 9999;
@@ -558,24 +1281,49 @@ legend_template = """
     padding: 10px;
     border-radius: 5px;
 ">
-<b>Relative District Risk Classification</b><br>
-<small>Tertile-based relative category</small><br><br>
-<span style="background:#2ECC71;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Lower Relative Risk<br>
-<span style="background:#F39C12;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Moderate Relative Risk<br>
-<span style="background:#E74C3C;width:12px;height:12px;display:inline-block;margin-right:8px;"></span>Higher Relative Risk
+{risk_legend_items}
+<span style="border:3px dashed #8E0000;width:15px;height:10px;display:inline-block;margin-right:8px;"></span>GeoAI-derived Gi* hotspots<br>
+<span style="border:3px solid #1565C0;width:15px;height:10px;display:inline-block;margin-right:8px;"></span>Top-ranked districts<br>
+<span style="border:4px solid #111111;background:#FFD600;width:15px;height:10px;display:inline-block;margin-right:8px;"></span>Selected hotspot
 </div>
-{% endmacro %}
+{{% endmacro %}}
 """
 
 legend = MacroElement()
 legend._template = Template(legend_template)
 geoai_map.get_root().add_child(legend)
+folium.LayerControl(collapsed=False).add_to(geoai_map)
 
 st_folium(
     geoai_map,
+    key=(
+        f"geoai_map::{map_filter}::"
+        f"{map_focus_county or 'none'}::"
+        f"{map_focus_district or 'none'}"
+    ),
     height=850,
-    use_container_width=True
+    use_container_width=True,
+    returned_objects=[],
 )
+
+st.subheader("GeoAI-Derived Hotspot Statistics")
+st.caption(
+    "Positive Getis-Ord Gi* results calculated from the model-derived "
+    "outbreak-risk surface and classified using the study's 95% confidence "
+    "threshold (z ≥ 1.96 and p ≤ 0.05). These are distinct from traditional "
+    "Gi* hotspots calculated from observed cumulative incidence."
+)
+if hotspot_summary_table.empty:
+    st.info(
+        "No statistically significant GeoAI-derived Gi* hotspot "
+        "statistics are available."
+    )
+else:
+    st.dataframe(
+        hotspot_summary_table,
+        hide_index=True,
+        use_container_width=True,
+    )
 
 
 # --------------------------------
