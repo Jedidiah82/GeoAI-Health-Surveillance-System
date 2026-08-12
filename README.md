@@ -4,6 +4,10 @@ Privacy-preserving GeoAI health surveillance prototype integrating geospatial in
 
 ---
 
+> **Version notice:** The artefact assessed in the MSc dissertation is permanently preserved at [`dissertation-final-v1.1`](https://github.com/Jedidiah82/GeoAI-Health-Surveillance-System/tree/dissertation-final-v1.1), commit [`3c3317c`](https://github.com/Jedidiah82/GeoAI-Health-Surveillance-System/commit/3c3317c57bf3ae93162456806ed872c225691163). The current `main` branch may include post-assessment usability enhancements that do not alter the preserved dissertation version.
+
+---
+
 ## Dissertation Information
 
 **Title:**  
