@@ -1046,14 +1046,10 @@ trend_fig.update_layout(
 st.plotly_chart(trend_fig, width="stretch")
 
 # --------------------------------
-# Operational Alert Panel
+# Relative Risk Summary
 # --------------------------------
 
 st.subheader("Relative Risk Summary")
-
-st.markdown("""
-This section summarises the latest relative-risk categories derived from the national distribution of predicted probabilities. The categories support comparative prioritisation and do not represent fixed epidemiological thresholds.
-""")
 
 higher_relative_count = latest_df[
     latest_df["Relative_Risk_Level"] == "Higher Relative Risk"
@@ -1067,14 +1063,89 @@ lower_relative_count = latest_df[
     latest_df["Relative_Risk_Level"] == "Lower Relative Risk"
 ].shape[0]
 
-st.error(
-    f"{higher_relative_count} district(s) are classified as Higher Relative Risk."
+risk_summary_cards = [
+    ("Lower Relative Risk", lower_relative_count, "#2ECC71", "#ecfdf5"),
+    ("Moderate Relative Risk", moderate_relative_count, "#F39C12", "#fffbeb"),
+    ("Higher Relative Risk", higher_relative_count, "#E74C3C", "#fef2f2"),
+]
+
+risk_summary_columns = st.columns(3)
+for column, (label, count, accent, background) in zip(
+    risk_summary_columns, risk_summary_cards
+):
+    column.markdown(
+        f"""
+        <div style="
+            border:1px solid #e5e7eb;
+            border-top:4px solid {accent};
+            border-radius:0.65rem;
+            background:{background};
+            padding:0.9rem 1rem;
+            min-height:6.1rem;
+        ">
+          <div style="color:#374151;font-size:0.92rem;font-weight:650;">
+            {label}
+          </div>
+          <div style="color:#111827;font-size:1.65rem;font-weight:750;line-height:1.25;">
+            {count}
+          </div>
+          <div style="color:#4b5563;font-size:0.82rem;">districts</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.markdown("""
+The categories summarise the latest relative-risk classification derived from the
+national distribution of predicted probabilities. They support comparative
+prioritisation and do not represent fixed epidemiological thresholds.
+""")
+
+risk_total = max(
+    lower_relative_count + moderate_relative_count + higher_relative_count,
+    1,
 )
-st.warning(
-    f"{moderate_relative_count} district(s) are classified as Moderate Relative Risk."
+risk_segments = [
+    ("Lower", lower_relative_count, "#2ECC71"),
+    ("Moderate", moderate_relative_count, "#F39C12"),
+    ("Higher", higher_relative_count, "#E74C3C"),
+]
+risk_segment_html = "".join(
+    f"""
+    <div title="{label} Relative Risk: {count} districts"
+         style="width:{(count / risk_total) * 100:.4f}%;background:{colour};
+                height:0.75rem;min-width:2px;"></div>
+    """
+    for label, count, colour in risk_segments
 )
-st.success(
-    f"{lower_relative_count} district(s) are classified as Lower Relative Risk."
+risk_distribution_labels = "".join(
+    f"""
+    <span style="display:inline-flex;align-items:center;gap:0.35rem;white-space:nowrap;">
+      <span style="width:0.65rem;height:0.65rem;border-radius:2px;background:{colour};
+                   display:inline-block;"></span>
+      {label} {count}
+    </span>
+    """
+    for label, count, colour in risk_segments
+)
+
+st.markdown(
+    f"""
+    <div style="margin:0.35rem 0 0.9rem 0;">
+      <div style="color:#374151;font-size:0.9rem;font-weight:650;margin-bottom:0.45rem;">
+        Relative Risk Category Distribution
+      </div>
+      <div style="display:flex;overflow:hidden;border-radius:999px;
+                  border:1px solid #d1d5db;background:#f3f4f6;">
+        {risk_segment_html}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:0.7rem 1.2rem;margin-top:0.45rem;
+                  color:#4b5563;font-size:0.82rem;">
+        {risk_distribution_labels}
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 st.info(
@@ -1712,35 +1783,6 @@ Note: Model confidence is represented through validation metrics such as ROC-AUC
 Precision, Recall, and F1-Score. A district-level uncertainty or confidence interval
 was not estimated in this prototype and is recommended for future enhancement.
 """)
-
-
-# -----------------------------
-# Relative Risk Category Distribution
-# -----------------------------
-st.subheader("Relative Risk Category Distribution")
-
-with st.expander("About relative risk category distribution"):
-    st.markdown("""
-    This summary displays the distribution of the latest tertile-based relative-risk
-    categories across Liberia.
-    """)
-
-risk_counts = latest_df["Relative_Risk_Level"].value_counts().reset_index()
-risk_counts.columns = ["Relative Risk Category", "District Count"]
-
-risk_fig = px.bar(
-    risk_counts,
-    x="Relative Risk Category",
-    y="District Count",
-    title="Latest District Relative Risk Classification Summary"
-)
-
-risk_fig.update_layout(
-    xaxis_title="Relative Risk Category",
-    yaxis_title="Number of Districts"
-)
-
-st.plotly_chart(risk_fig, width="stretch")
 
 
 # --------------------------------
