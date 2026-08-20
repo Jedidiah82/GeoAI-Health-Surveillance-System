@@ -687,7 +687,7 @@ if hotspot_names:
         st.dataframe(
             hotspot_summary_table,
             hide_index=True,
-            use_container_width=True,
+            width="stretch",
         )
         st.selectbox(
             "Select a hotspot district",
@@ -700,13 +700,13 @@ if hotspot_names:
             st.button(
                 "Focus dashboard and map",
                 on_click=_focus_drilldown_hotspot,
-                use_container_width=True,
+                width="stretch",
             )
         with national_view_col:
             st.button(
                 "Return map to national view",
                 on_click=_clear_map_focus,
-                use_container_width=True,
+                width="stretch",
             )
 else:
     st.warning(
@@ -784,7 +784,7 @@ st.sidebar.selectbox(
     ),
 )
 
-if st.sidebar.button("Clear hotspot focus", use_container_width=True):
+if st.sidebar.button("Clear hotspot focus", width="stretch"):
     _clear_map_focus()
 
 st.sidebar.markdown("### Explore by Location")
@@ -1581,7 +1581,7 @@ with map_slot:
             f"{map_focus_district or 'none'}"
         ),
         height=760,
-        use_container_width=True,
+        width="stretch",
         returned_objects=[],
     )
 
@@ -1601,7 +1601,7 @@ else:
     st.dataframe(
         hotspot_summary_table,
         hide_index=True,
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -1786,7 +1786,7 @@ if shap_summary_path:
         st.image(
             shap_summary_path,
             caption="SHAP summary of feature effects on XGBoost predictions",
-            use_container_width=True,
+            width="stretch",
         )
 
 if shap_importance_path:
@@ -1794,7 +1794,7 @@ if shap_importance_path:
         st.image(
             shap_importance_path,
             caption="Mean absolute SHAP importance for the selected XGBoost model",
-            use_container_width=True,
+            width="stretch",
         )
 
 if not shap_summary_path and not shap_importance_path:
@@ -1844,7 +1844,7 @@ with st.expander("About model confidence and validation"):
 
 st.dataframe(
     model_results_display,
-    use_container_width=True
+    width="stretch"
 )
 
 best_model = model_results.sort_values(
@@ -1941,7 +1941,7 @@ if available_maps:
     st.image(
         available_maps[selected_map],
         caption=selected_map,
-        use_container_width=True
+        width="stretch"
     )
 
 else:
