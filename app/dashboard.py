@@ -54,6 +54,85 @@ st.markdown(
     [data-testid="stMetricValue"] {
         color: #111827 !important;
     }
+    /* Give the four primary analytical KPIs stronger visual priority without
+       enlarging every metric used elsewhere in the dashboard. */
+    .st-key-primary_kpis [data-testid="stMetricLabel"] p {
+        color: #1f2937 !important;
+        font-size: clamp(1.05rem, 1.25vw, 1.18rem) !important;
+        font-weight: 750 !important;
+        line-height: 1.25 !important;
+    }
+    .st-key-primary_kpis [data-testid="stMetricValue"],
+    .st-key-primary_kpis [data-testid="stMetricValue"] > div,
+    .st-key-primary_kpis [data-testid="stMetricValue"] p {
+        color: #0f172a !important;
+        font-size: clamp(1.9rem, 2.4vw, 2.25rem) !important;
+        font-weight: 450 !important;
+        line-height: 1.15 !important;
+    }
+    .st-key-primary_kpis [data-testid="stColumn"] {
+        min-height: 12rem;
+        background: #fbfdff;
+        border: 1px solid #e2e8f0;
+        border-top: 3px solid #2563eb;
+        border-radius: 0.55rem;
+        box-shadow: 0 2px 7px rgba(15, 23, 42, 0.045);
+        padding: 0.9rem 1rem 0.8rem;
+    }
+    .st-key-primary_kpis [data-testid="stMetric"] {
+        gap: 0.3rem;
+    }
+    .st-key-primary_kpis [data-testid="stCaptionContainer"] {
+        color: #475569 !important;
+        margin-top: 0.4rem;
+    }
+    .st-key-primary_kpis [data-testid="stCaptionContainer"] p {
+        color: #475569 !important;
+    }
+    /* Streamlit scrolls the main content inside nested containers, where CSS
+       sticky positioning is not dependable. A restrained fixed header keeps
+       the dashboard identity visible without occupying the full viewport. */
+    .st-key-sticky_dashboard_header {
+        position: fixed;
+        top: 3.2rem;
+        left: 0;
+        right: 0;
+        width: 100%;
+        z-index: 999;
+        background: rgba(255, 255, 255, 0.975);
+        backdrop-filter: blur(8px);
+        border: 0;
+        border-bottom: 1px solid #dbe3ec;
+        border-radius: 0;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.055);
+        padding: 0.45rem 1rem 0.5rem;
+        text-align: center;
+    }
+    .st-key-sticky_dashboard_header h1 {
+        margin: 0 !important;
+        padding: 0 !important;
+        font-size: clamp(1.75rem, 2.25vw, 2.15rem) !important;
+        line-height: 1.2 !important;
+        text-align: center !important;
+    }
+    .sticky-header-spacer { height: 0.65rem; }
+    .st-key-dashboard_metadata [data-testid="stCaptionContainer"],
+    .st-key-dashboard_metadata [data-testid="stCaptionContainer"] p {
+        color: #3f4b5e !important;
+    }
+    @media (max-width: 768px) {
+        .st-key-sticky_dashboard_header {
+            top: 3rem;
+            width: 100%;
+            padding-inline: 0.5rem;
+        }
+        .st-key-primary_kpis [data-testid="stMetricLabel"] p {
+            font-size: 1rem !important;
+        }
+        .st-key-primary_kpis [data-testid="stColumn"] {
+            min-height: auto;
+        }
+    }
     [data-testid="stDataFrame"] { font-size: 0.88rem; }
     .geoai-method-note {
         border-left: 4px solid #2563eb;
@@ -86,10 +165,14 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.title("GeoAI Surveillance Dashboard Prototype")
-st.caption("Privacy-preserving district-level COVID-19 outbreak risk monitoring system")
-
-st.caption(f"Last Updated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC")
+with st.container(key="sticky_dashboard_header"):
+    st.title("GeoAI Surveillance Dashboard Prototype")
+st.markdown('<div class="sticky-header-spacer"></div>', unsafe_allow_html=True)
+with st.container(key="dashboard_metadata"):
+    st.caption("Privacy-preserving district-level COVID-19 outbreak risk monitoring system")
+    st.caption(
+        f"Last Updated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"
+    )
 
 col1, col2, col3 = st.columns(3)
 
@@ -436,7 +519,8 @@ latest_data_period = (
 )
 hotspot_analysis_period = "Latest Available Spatial Analysis"
 
-m1, m2, m3, m4 = st.columns(4)
+primary_kpi_container = st.container(key="primary_kpis")
+m1, m2, m3, m4 = primary_kpi_container.columns(4)
 
 with m1:
     st.metric("Top Ranked Districts", 10)
@@ -658,9 +742,11 @@ with st.expander("Learn how these analytical outputs differ"):
 
 # Render the primary decision-support regions in a map-first sequence. Data
 # preparation continues below, but content written into these containers appears
-# here: signal -> location -> interpretation -> prioritisation.
+# here: signal -> location -> temporal context -> action -> prioritisation.
 map_slot = st.container()
 decision_slot = st.container()
+trend_slot = st.container()
+action_slot = st.container()
 ranking_slot = st.container()
 
 st.sidebar.header("District Exploration")
@@ -945,12 +1031,12 @@ The dashboard presents the model outputs in three complementary ways:
 # Recommended Actions
 # --------------------------------
 
-decision_slot.subheader("Recommended Actions")
+action_slot.subheader("Recommended Actions")
 
 selected_risk_level = latest_record["Relative_Risk_Level"]
 
 if selected_risk_level == "Higher Relative Risk":
-    decision_slot.markdown("""
+    action_slot.markdown("""
     <div class="action-panel" style="--risk-accent:#dc2626">
     <strong>Higher Relative Risk</strong>
     <ul>
@@ -963,7 +1049,7 @@ if selected_risk_level == "Higher Relative Risk":
     """, unsafe_allow_html=True)
 
 elif selected_risk_level == "Moderate Relative Risk":
-    decision_slot.markdown("""
+    action_slot.markdown("""
     <div class="action-panel" style="--risk-accent:#d97706">
     <strong>Moderate Relative Risk</strong>
     <ul>
@@ -975,7 +1061,7 @@ elif selected_risk_level == "Moderate Relative Risk":
     """, unsafe_allow_html=True)
 
 else:
-    decision_slot.markdown("""
+    action_slot.markdown("""
     <div class="action-panel" style="--risk-accent:#16a34a">
     <strong>Lower Relative Risk</strong>
     <ul>
@@ -985,12 +1071,17 @@ else:
     </ul></div>
     """, unsafe_allow_html=True)
 
-decision_slot.caption(
+action_slot.caption(
     f"Current relative-risk category: {latest_record['Relative_Risk_Level']} "
     f"(latest predicted outbreak probability = "
     f"{latest_record['Predicted_Probability']*100:.2f}%). "
     "The category reflects the district's relative position within the national distribution."
 )
+
+# -----------------------------
+# Temporal trend
+# -----------------------------
+trend_slot.subheader("Temporal Outbreak Probability Trend")
 
 latest_two = district_df.sort_values("Date").tail(2)
 
@@ -1005,7 +1096,7 @@ if len(latest_two) == 2:
     else:
         trend_status = "Stable"
 
-    trend_col1, trend_col2 = st.columns(2)
+    trend_col1, trend_col2 = trend_slot.columns(2)
 
     with trend_col1:
         st.metric(
@@ -1019,12 +1110,7 @@ if len(latest_two) == 2:
             trend_status
         )
 
-# -----------------------------
-# Trend chart
-# -----------------------------
-st.subheader("Temporal Outbreak Probability Trend")
-
-with st.expander("About this trend chart"):
+with trend_slot.expander("About this trend chart"):
     st.markdown("""
     This chart shows how predicted outbreak probability changes over time
     for the selected district, supporting retrospective trend monitoring and comparative surveillance review.
@@ -1043,7 +1129,7 @@ trend_fig.update_layout(
     yaxis_title="Predicted Outbreak Probability"
 )
 
-st.plotly_chart(trend_fig, width="stretch")
+trend_slot.plotly_chart(trend_fig, width="stretch")
 
 # --------------------------------
 # Relative Risk Summary
@@ -1262,10 +1348,11 @@ if not hotspot_map_gdf.empty:
         show=map_filter != "Top-ranked districts only",
         style_function=lambda feature: {
             "fillColor": "#C0392B",
-            "color": "#8E0000",
-            "weight": 3.5,
+            "color": "#C62828",
+            "weight": 4,
             "fillOpacity": 0.10,
-            "dashArray": "7, 4",
+            "dashArray": "14, 9",
+            "lineCap": "butt",
         },
         highlight_function=lambda feature: {
             "color": "#000000",
@@ -1473,7 +1560,7 @@ legend_template = f"""
     border-radius: 5px;
 ">
 {risk_legend_items}
-<span style="border:3px dashed #8E0000;width:15px;height:10px;display:inline-block;margin-right:8px;"></span>GeoAI-derived Gi* hotspots<br>
+<span style="border:3px dashed #C62828;width:18px;height:10px;display:inline-block;margin-right:8px;"></span>GeoAI-derived Gi* hotspots<br>
 <span style="border:3px solid #1565C0;width:15px;height:10px;display:inline-block;margin-right:8px;"></span>Top-ranked districts<br>
 <span style="border:4px dashed #2E1065;background:rgba(76,29,149,.08);width:15px;height:10px;display:inline-block;margin-right:8px;"></span>Selected hotspot
 </div>
