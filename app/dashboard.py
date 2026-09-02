@@ -35,11 +35,36 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Preserve Streamlit's responsive layout while improving legibility. */
-    .stApp { color: #172033; }
+    :root {
+        --geoai-indigo: #4338ca;
+        --geoai-blue: #2563eb;
+        --geoai-teal: #0f766e;
+        --geoai-ink: #172033;
+        --geoai-muted: #526078;
+        --geoai-line: #dce5f0;
+        --geoai-surface: rgba(255, 255, 255, 0.92);
+    }
+    /* A calm indigo-teal canvas keeps dense analytical content readable. */
+    .stApp {
+        color: var(--geoai-ink);
+        background:
+            radial-gradient(circle at 8% 6%, rgba(67, 56, 202, 0.07), transparent 24rem),
+            radial-gradient(circle at 92% 12%, rgba(15, 118, 110, 0.07), transparent 26rem),
+            linear-gradient(180deg, #f8fbff 0%, #ffffff 24rem, #f8fafc 100%);
+    }
+    [data-testid="stMainBlockContainer"] {
+        max-width: 1180px;
+    }
     h1 { font-size: clamp(2rem, 3vw, 2.35rem) !important; line-height: 1.15 !important; }
-    h2 { font-size: clamp(1.55rem, 2.2vw, 1.8rem) !important; }
-    h3 { font-size: clamp(1.25rem, 1.8vw, 1.5rem) !important; }
+    h2 {
+        color: #172554 !important;
+        font-size: clamp(1.55rem, 2.2vw, 1.8rem) !important;
+    }
+    h3 {
+        color: #1e2b4d !important;
+        font-size: clamp(1.25rem, 1.8vw, 1.5rem) !important;
+        letter-spacing: -0.012em;
+    }
     p, li, label, [data-testid="stCaptionContainer"] {
         font-size: 0.94rem !important;
         line-height: 1.55 !important;
@@ -71,13 +96,25 @@ st.markdown(
         line-height: 1.15 !important;
     }
     .st-key-primary_kpis [data-testid="stColumn"] {
-        min-height: 12rem;
-        background: #fbfdff;
-        border: 1px solid #e2e8f0;
-        border-top: 3px solid #2563eb;
-        border-radius: 0.55rem;
-        box-shadow: 0 2px 7px rgba(15, 23, 42, 0.045);
-        padding: 0.9rem 1rem 0.8rem;
+        min-height: 7.7rem;
+        background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(238,242,255,0.82));
+        border: 1px solid #dfe5f3;
+        border-top: 3px solid var(--geoai-indigo);
+        border-radius: 0.8rem;
+        box-shadow: 0 8px 24px rgba(30, 41, 59, 0.065);
+        padding: 0.95rem 1rem 0.8rem;
+    }
+    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(2) {
+        border-top-color: #2563eb;
+        background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(239,246,255,0.84));
+    }
+    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(3) {
+        border-top-color: #0f766e;
+        background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(240,253,250,0.86));
+    }
+    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(4) {
+        border-top-color: #7c3aed;
+        background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(245,243,255,0.84));
     }
     .st-key-primary_kpis [data-testid="stMetric"] {
         gap: 0.3rem;
@@ -99,16 +136,17 @@ st.markdown(
         right: 0;
         width: 100%;
         z-index: 999;
-        background: rgba(255, 255, 255, 0.975);
+        background: linear-gradient(105deg, rgba(49,46,129,0.985), rgba(37,99,235,0.975) 56%, rgba(15,118,110,0.975));
         backdrop-filter: blur(8px);
         border: 0;
-        border-bottom: 1px solid #dbe3ec;
+        border-bottom: 1px solid rgba(255,255,255,0.3);
         border-radius: 0;
-        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.055);
+        box-shadow: 0 6px 22px rgba(30, 41, 59, 0.18);
         padding: 0.45rem 1rem 0.5rem;
         text-align: center;
     }
     .st-key-sticky_dashboard_header h1 {
+        color: #ffffff !important;
         margin: 0 !important;
         padding: 0 !important;
         font-size: clamp(1.75rem, 2.25vw, 2.15rem) !important;
@@ -135,12 +173,13 @@ st.markdown(
     }
     [data-testid="stDataFrame"] { font-size: 0.88rem; }
     .geoai-method-note {
-        border-left: 4px solid #2563eb;
-        background: #eff6ff;
+        border-left: 4px solid var(--geoai-teal);
+        background: linear-gradient(100deg, #eef2ff 0%, #eff6ff 52%, #ecfdf5 100%);
         color: #1e3a5f;
         padding: 0.8rem 1rem;
-        border-radius: 0.35rem;
+        border-radius: 0.6rem;
         margin: 0.65rem 0 1rem;
+        box-shadow: 0 5px 16px rgba(30, 64, 175, 0.055);
     }
     .selected-intelligence {
         border-left: 5px solid #4c1d95;
@@ -160,6 +199,19 @@ st.markdown(
         margin-bottom: 0.5rem;
     }
     .action-panel ul { margin-bottom: 0.15rem; }
+    [data-testid="stExpander"] {
+        background: rgba(255,255,255,0.72);
+        border-color: var(--geoai-line) !important;
+        border-radius: 0.65rem !important;
+    }
+    [data-testid="stPopover"] button,
+    [data-testid="stButton"] button {
+        border-radius: 0.6rem;
+    }
+    section[data-testid="stSidebar"] > div {
+        background: linear-gradient(180deg, #f4f7ff 0%, #f8fbff 52%, #f0fdfa 100%);
+        border-right: 1px solid #dfe7f2;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -523,33 +575,40 @@ primary_kpi_container = st.container(key="primary_kpis")
 m1, m2, m3, m4 = primary_kpi_container.columns(4)
 
 with m1:
-    st.metric("Top Ranked Districts", 10)
-    st.caption(
-        "Operational ranking of the ten districts with the highest latest predicted outbreak probabilities."
+    st.metric(
+        "Top Ranked Districts",
+        10,
+        help=(
+            "The ten districts with the highest latest predicted outbreak "
+            "probabilities, ranked for operational prioritisation."
+        ),
     )
 
 with m2:
-    st.metric("Mean Predicted Probability", f"{avg_risk_score_pct:.2f}%")
-    st.caption(
-        "Mean predicted outbreak probability across the latest district records. "
-        "Displayed as a percentage; higher values indicate greater average predicted outbreak risk."
+    st.metric(
+        "Mean Predicted Probability",
+        f"{avg_risk_score_pct:.2f}%",
+        help=(
+            "Average predicted outbreak probability across the latest district "
+            "records, displayed as a percentage."
+        ),
     )
 
 with m3:
     st.metric(
         "GeoAI-Derived Spatial Hotspots",
         detected_hotspot_count if not hotspot_gdf.empty else "N/A",
-    )
-    st.caption(
-        "Districts classified by applying Getis-Ord Gi* to the model-derived "
-        "outbreak-risk surface at the study's 95% confidence threshold. These may differ "
-        "from both the probability ranking and traditional incidence hotspots."
+        help=(
+            "Districts identified by Getis-Ord Gi* as significant spatial "
+            "concentrations in the model-derived risk surface at 95% confidence."
+        ),
     )
 
 with m4:
-    st.metric("Latest Data", latest_data_period)
-    st.caption(
-        "Most recent surveillance period represented in the dashboard."
+    st.metric(
+        "Latest Data",
+        latest_data_period,
+        help="Most recent surveillance period represented in the dashboard.",
     )
 
 st.caption(
@@ -636,11 +695,13 @@ hotspot_summary_table = pd.DataFrame(
 
 if hotspot_names:
     st.subheader(
-        f"GeoAI-Derived Spatial Hotspots — {hotspot_analysis_period}"
-    )
-    st.caption(
-        "**Method:** XGBoost predicted outbreak probabilities → "
-        "Getis-Ord Gi* spatial analysis → GeoAI-derived hotspot intelligence."
+        f"GeoAI-Derived Spatial Hotspots — {hotspot_analysis_period}",
+        help=(
+            "Method: XGBoost predicted outbreak probabilities → Getis-Ord Gi* "
+            "spatial analysis → GeoAI-derived hotspot intelligence. These districts "
+            "are significant spatial concentrations in model-derived risk and are "
+            "distinct from probability ranking and incidence-based hotspots."
+        ),
     )
     visible_hotspot_names = hotspot_names[:5]
     remaining_hotspots = max(
@@ -655,13 +716,6 @@ if hotspot_names:
         hotspot_summary += f" · **+{remaining_hotspots} more**"
 
     st.markdown(hotspot_summary)
-    st.caption(
-        "These districts are identified by applying Getis-Ord Gi* spatial "
-        "analysis to the model-derived outbreak-risk surface. They are "
-        "analytically distinct from both the probability ranking of individual "
-        "districts and the traditional hotspot analysis of observed cumulative "
-        "incidence."
-    )
 
     hotspot_summary_table = detected_hotspots_gdf[
         [
@@ -910,12 +964,13 @@ else:
     for column in hotspot_result_columns:
         top_ranked[column] = pd.NA
 
-ranking_slot.subheader("Top Ranked Districts by Predicted Probability")
-
-ranking_slot.caption(
-    "This table ranks the ten districts with the highest latest predicted outbreak probabilities. "
-    "It is an operational prioritisation tool. The relative-risk category and spatial-hotspot "
-    "status show how the model ranking compares with the complementary analytical outputs."
+ranking_slot.subheader(
+    "Top Ranked Districts by Predicted Probability",
+    help=(
+        "Ranks the ten districts with the highest latest predicted outbreak "
+        "probabilities. Relative-risk and hotspot columns show how this ranking "
+        "compares with the complementary analytical outputs."
+    ),
 )
 
 top_ranked_display = top_ranked.rename(
@@ -1644,12 +1699,13 @@ with map_slot:
         returned_objects=[],
     )
 
-st.subheader("GeoAI-Derived Hotspot Statistics")
-st.caption(
-    "Positive Getis-Ord Gi* results calculated from the model-derived "
-    "outbreak-risk surface and classified using the study's 95% confidence "
-    "threshold (z ≥ 1.96 and p ≤ 0.05). These are distinct from traditional "
-    "Gi* hotspots calculated from observed cumulative incidence."
+st.subheader(
+    "GeoAI-Derived Hotspot Statistics",
+    help=(
+        "Positive Getis-Ord Gi* results from the model-derived outbreak-risk "
+        "surface, classified at 95% confidence (z ≥ 1.96 and p ≤ 0.05). "
+        "These differ from incidence-based Gi* hotspots."
+    ),
 )
 if hotspot_summary_table.empty:
     st.info(
