@@ -9,6 +9,7 @@ models/*
 # Private environment and secrets
 .env
 *.env
+.streamlit/secrets.toml
 
 # Local databases
 *.db

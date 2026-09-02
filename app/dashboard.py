@@ -23,6 +23,18 @@ DATA_DIR = PROJECT_ROOT / "data"
 FIGURES_DIR = PROJECT_ROOT / "figures"
 LOGS_DIR = PROJECT_ROOT / "logs"
 
+
+def _optional_setting(name):
+    """Read an optional setting from Streamlit secrets or the environment."""
+    environment_value = os.getenv(name, "").strip()
+
+    try:
+        value = st.secrets.get(name, environment_value)
+    except (FileNotFoundError, KeyError):
+        value = environment_value
+
+    return str(value or "").strip()
+
 st.set_page_config(
     page_title="GeoAI Surveillance Dashboard",
     layout="wide"
@@ -1396,7 +1408,11 @@ map_slot.markdown(
     unsafe_allow_html=True,
 )
 
-geoai_map = create_geoai_map()
+geoai_map = create_geoai_map(
+    carto_basemap_api_key=_optional_setting(
+        "CARTO_BASEMAP_API_KEY"
+    )
+)
 
 # The shared map utility adds its layer control before dashboard-specific
 # overlays exist. Remove it here and recreate one after every overlay has
