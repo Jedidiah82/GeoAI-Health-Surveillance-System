@@ -601,6 +601,18 @@ def _clear_map_focus():
     st.session_state.pop("active_hotspot_label", None)
 
 
+def _focus_selected_location():
+    """Zoom the map to a district chosen through the location selectors."""
+    district = st.session_state.get("district_selector")
+    county = st.session_state.get("county_selector")
+    if not district or not county:
+        return
+
+    st.session_state["map_focus_district"] = district
+    st.session_state["map_focus_county"] = county
+    st.session_state.pop("active_hotspot_label", None)
+
+
 hotspot_names = (
     detected_hotspots_gdf["adm2_name"].tolist()
     if not detected_hotspots_gdf.empty
@@ -809,6 +821,7 @@ selected_county = st.sidebar.selectbox(
     "County",
     counties,
     key="county_selector",
+    on_change=_clear_map_focus,
 )
 
 # --------------------------------
@@ -838,6 +851,7 @@ selected_district = st.sidebar.selectbox(
     "District",
     county_districts,
     key="district_selector",
+    on_change=_focus_selected_location,
 )
 
 top_ranked = (
@@ -1252,8 +1266,9 @@ with map_slot.expander("About this map"):
     spatial concentrations in the model-derived outbreak-risk surface; it is not
     the traditional Gi* analysis of observed cumulative incidence. Use the
     spatial-focus control to show all districts, GeoAI-derived hotspots, or the
-    ten highest predicted-probability districts. Selecting a hotspot synchronises
-    the district details and highlights its location.
+    ten highest predicted-probability districts. The district selected in the
+    sidebar is always highlighted; selecting it directly or through the hotspot
+    workflow also zooms the map to its boundary.
     """)
 
 map_filter = map_slot.radio(
@@ -1272,42 +1287,59 @@ map_filter = map_slot.radio(
 
 map_focus_district = st.session_state.get("map_focus_district")
 map_focus_county = st.session_state.get("map_focus_county")
-if map_focus_district and map_focus_county:
-    focus_prediction = latest_df[
-        (latest_df["adm2_name"] == map_focus_district)
-        & (latest_df["adm1_name"] == map_focus_county)
+selected_map_district = selected_district
+selected_map_county = selected_county
+focus_prediction = latest_df[
+    (latest_df["adm2_name"] == selected_map_district)
+    & (latest_df["adm1_name"] == selected_map_county)
+]
+selected_pcode = (
+    str(focus_prediction.iloc[0]["adm2_pcode"]).strip()
+    if not focus_prediction.empty
+    else ""
+)
+focus_spatial = gpd.GeoDataFrame()
+if selected_pcode and "adm2_pcode" in hotspot_gdf.columns:
+    focus_spatial = hotspot_gdf[
+        hotspot_gdf["adm2_pcode"].astype(str).str.strip()
+        == selected_pcode
     ]
-    focus_spatial = detected_hotspots_gdf[
-        (detected_hotspots_gdf["adm2_name"] == map_focus_district)
-        & (detected_hotspots_gdf["adm1_name"] == map_focus_county)
+if (
+    focus_spatial.empty
+    and {"adm2_name", "adm1_name"}.issubset(hotspot_gdf.columns)
+):
+    focus_spatial = hotspot_gdf[
+        (
+            hotspot_gdf["adm2_name"].map(_normalise_text)
+            == _normalise_text(selected_map_district)
+        )
+        & (
+            hotspot_gdf["adm1_name"].map(_normalise_text)
+            == _normalise_text(selected_map_county)
+        )
     ]
-    focus_probability = (
-        f"{focus_prediction.iloc[0]['Predicted_Probability'] * 100:.2f}%"
-        if not focus_prediction.empty else "Unavailable"
-    )
-    focus_risk = (
-        focus_prediction.iloc[0]["Relative_Risk_Level"]
-        if not focus_prediction.empty else "Unavailable"
-    )
-    focus_confidence = (
-        str(focus_spatial.iloc[0]["Confidence"])
-        if not focus_spatial.empty else "Unavailable"
-    )
-    map_slot.markdown(
-        f"""
-        <div class="selected-intelligence">
-        Selected: {map_focus_district} — {map_focus_county}<br>
-        GeoAI Hotspot — {focus_confidence} · Predicted Probability
-        {focus_probability} · {focus_risk}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-else:
-    map_slot.caption(
-        "**Selected hotspot:** None. Choose a hotspot from the sidebar or "
-        "the hotspot drill-down above to highlight and zoom to it."
-    )
+focus_probability = (
+    f"{focus_prediction.iloc[0]['Predicted_Probability'] * 100:.2f}%"
+    if not focus_prediction.empty else "Unavailable"
+)
+focus_risk = (
+    focus_prediction.iloc[0]["Relative_Risk_Level"]
+    if not focus_prediction.empty else "Unavailable"
+)
+focus_spatial_status = (
+    str(focus_spatial.iloc[0]["Spatial_Hotspot_Status"])
+    if not focus_spatial.empty else "Spatial result unavailable"
+)
+map_slot.markdown(
+    f"""
+    <div class="selected-intelligence">
+    Selected district: {selected_map_district} — {selected_map_county}<br>
+    {focus_spatial_status} · Predicted Probability
+    {focus_probability} · {focus_risk}
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 geoai_map = create_geoai_map()
 
@@ -1446,84 +1478,110 @@ if not top_ranked_map_gdf.empty:
         ),
     ).add_to(geoai_map)
 
-if map_focus_district:
-    focus_gdf = hotspot_map_gdf[
-        (hotspot_map_gdf["adm2_name"] == map_focus_district)
-        & (
-            (hotspot_map_gdf["adm1_name"] == map_focus_county)
-            if map_focus_county
-            else True
-        )
-    ].copy()
+selected_gdf = focus_spatial.copy()
 
-    if not focus_gdf.empty:
-        selected_row = focus_gdf.iloc[0]
+if not selected_gdf.empty and selected_gdf.crs is None:
+    selected_gdf = selected_gdf.set_crs(
+        "EPSG:4326",
+        allow_override=True,
+    )
+elif (
+    not selected_gdf.empty
+    and selected_gdf.crs.to_epsg() != 4326
+):
+    selected_gdf = selected_gdf.to_crs("EPSG:4326")
+
+if not selected_gdf.empty:
+    selected_row = selected_gdf.iloc[0]
+    prediction_match = latest_df[
+        latest_df["adm2_pcode"].astype(str)
+        == str(selected_row["adm2_pcode"])
+    ]
+    if prediction_match.empty:
         prediction_match = latest_df[
-            latest_df["adm2_pcode"].astype(str)
-            == str(selected_row["adm2_pcode"])
+            latest_df["adm2_name"].map(_normalise_text)
+            == _normalise_text(selected_map_district)
         ]
-        if prediction_match.empty:
-            prediction_match = latest_df[
-                latest_df["adm2_name"].map(_normalise_text)
-                == _normalise_text(map_focus_district)
-            ]
 
-        predicted_probability = (
-            f"{prediction_match.iloc[0]['Predicted_Probability'] * 100:.2f}%"
-            if not prediction_match.empty
-            else "Unavailable"
-        )
-        relative_risk = (
-            prediction_match.iloc[0]["Relative_Risk_Level"]
-            if not prediction_match.empty
-            else "Unavailable"
-        )
-        z_text = (
-            f"{float(selected_row['GiZScore']):.3f}"
-            if pd.notna(selected_row["GiZScore"])
-            else "Unavailable"
-        )
-        p_text = (
-            f"{float(selected_row['GiPValue']):.4f}"
-            if pd.notna(selected_row["GiPValue"])
-            else "Unavailable"
-        )
-        popup_html = f"""
-        <b>{selected_row['adm2_name']}</b><br>
-        County: {selected_row['adm1_name']}<br>
-        Predicted probability: {predicted_probability}<br>
-        Relative-risk category: {relative_risk}<br>
-        Gi* result: {selected_row['Spatial_Hotspot_Status']}<br>
-        Gi* z-score: {z_text}<br>
-        p-value: {p_text}<br>
-        Confidence: {selected_row['Confidence']}
-        """
+    predicted_probability = (
+        f"{prediction_match.iloc[0]['Predicted_Probability'] * 100:.2f}%"
+        if not prediction_match.empty
+        else "Unavailable"
+    )
+    relative_risk = (
+        prediction_match.iloc[0]["Relative_Risk_Level"]
+        if not prediction_match.empty
+        else "Unavailable"
+    )
+    z_text = (
+        f"{float(selected_row['GiZScore']):.3f}"
+        if pd.notna(selected_row["GiZScore"])
+        else "Unavailable"
+    )
+    p_text = (
+        f"{float(selected_row['GiPValue']):.4f}"
+        if pd.notna(selected_row["GiPValue"])
+        else "Unavailable"
+    )
+    popup_html = f"""
+    <b>{selected_map_district}</b><br>
+    County: {selected_map_county}<br>
+    Predicted probability: {predicted_probability}<br>
+    Relative-risk category: {relative_risk}<br>
+    GeoAI spatial status: {selected_row['Spatial_Hotspot_Status']}<br>
+    Gi* z-score: {z_text}<br>
+    p-value: {p_text}<br>
+    Confidence: {selected_row['Confidence']}
+    """
 
-        folium.GeoJson(
-            focus_gdf,
-            name=f"Selected Hotspot: {map_focus_district}",
-            show=True,
-            style_function=lambda feature: {
-                "fillColor": "#4C1D95",
-                "color": "#2E1065",
-                "weight": 6,
-                "fillOpacity": 0.08,
-                "dashArray": "12, 5",
-            },
-            tooltip=folium.Tooltip(
-                f"Selected hotspot: {selected_row['adm2_name']} "
-                f"({selected_row['adm1_name']})"
-            ),
-            popup=folium.Popup(popup_html, max_width=360),
-        ).add_to(geoai_map)
+    selected_district_layer = folium.FeatureGroup(
+        name=f"Selected District: {selected_map_district}",
+        show=True,
+    )
 
-        min_x, min_y, max_x, max_y = focus_gdf.total_bounds
-        geoai_map.fit_bounds(
-            [[min_y, min_x], [max_y, max_x]],
-            padding=(35, 35),
-        )
+    # A white halo keeps the selected boundary legible over every risk
+    # class and analytical overlay without obscuring the underlying fill.
+    folium.GeoJson(
+        selected_gdf,
+        style_function=lambda feature: {
+            "fillColor": "transparent",
+            "color": "#FFFFFF",
+            "weight": 9,
+            "opacity": 0.95,
+            "fillOpacity": 0,
+        },
+        interactive=False,
+    ).add_to(selected_district_layer)
 
-if not map_focus_district:
+    folium.GeoJson(
+        selected_gdf,
+        style_function=lambda feature: {
+            "fillColor": "transparent",
+            "color": "#4C1D95",
+            "weight": 5,
+            "opacity": 1,
+            "fillOpacity": 0,
+        },
+        tooltip=folium.Tooltip(
+            f"Selected district: {selected_map_district} "
+            f"({selected_map_county})"
+        ),
+        popup=folium.Popup(popup_html, max_width=360),
+    ).add_to(selected_district_layer)
+    selected_district_layer.add_to(geoai_map)
+
+if (
+    not selected_gdf.empty
+    and map_focus_district == selected_map_district
+    and map_focus_county == selected_map_county
+):
+    min_x, min_y, max_x, max_y = selected_gdf.total_bounds
+    geoai_map.fit_bounds(
+        [[min_y, min_x], [max_y, max_x]],
+        padding=(35, 35),
+    )
+
+else:
     # Keep the default and reset state tightly framed around Liberia instead
     # of exposing an unnecessarily broad West African extent.
     geoai_map.fit_bounds(
@@ -1562,7 +1620,7 @@ legend_template = f"""
 {risk_legend_items}
 <span style="border:3px dashed #C62828;width:18px;height:10px;display:inline-block;margin-right:8px;"></span>GeoAI-derived Gi* hotspots<br>
 <span style="border:3px solid #1565C0;width:15px;height:10px;display:inline-block;margin-right:8px;"></span>Top-ranked districts<br>
-<span style="border:4px dashed #2E1065;background:rgba(76,29,149,.08);width:15px;height:10px;display:inline-block;margin-right:8px;"></span>Selected hotspot
+<span style="border:4px solid #4C1D95;background:white;width:15px;height:10px;display:inline-block;margin-right:8px;"></span>Selected district
 </div>
 {{% endmacro %}}
 """
@@ -1577,6 +1635,7 @@ with map_slot:
         geoai_map,
         key=(
             f"geoai_map::{map_filter}::"
+            f"{selected_map_county}::{selected_map_district}::"
             f"{map_focus_county or 'none'}::"
             f"{map_focus_district or 'none'}"
         ),
