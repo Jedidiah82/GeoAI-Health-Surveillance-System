@@ -60,6 +60,17 @@ https://github.com/Jedidiah82/GeoAI-Health-Surveillance-System
 
 > Note: The Secure API Gateway is implemented as part of the prototype architecture but is not publicly listed in this README. Access to protected API documentation may be provided only for authorised academic review or examination purposes.
 
+### Optional CARTO basemap key
+
+The dashboard uses CARTO Positron when `CARTO_BASEMAP_API_KEY` is configured
+through Streamlit secrets or the runtime environment. Without a key, it falls
+back to OpenStreetMap so unauthenticated CARTO watermark tiles are not shown.
+
+For local development, copy `.streamlit/secrets.toml.example` to
+`.streamlit/secrets.toml` and replace the placeholder. Never commit the real
+key. In Streamlit Community Cloud, add the same setting in the app's Secrets
+configuration.
+
 ---
 
 ## Public Dashboard Data Notice
