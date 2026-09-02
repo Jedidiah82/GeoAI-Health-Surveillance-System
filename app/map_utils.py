@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import quote
 
 import folium
 import geopandas as gpd
@@ -92,7 +93,7 @@ def validate_fields(gdf, required_fields, layer_name):
 # Create interactive GeoAI map
 # ---------------------------------------------------
 
-def create_geoai_map():
+def create_geoai_map(carto_basemap_api_key=None):
     """
     Create the operational GeoAI spatial intelligence map.
 
@@ -103,6 +104,13 @@ def create_geoai_map():
     - Getis-Ord Gi* hotspot intelligence
     - Local Moran's I cluster information
     - County boundaries and labels
+
+    Parameters
+    ----------
+    carto_basemap_api_key : str, optional
+        CARTO-issued public basemap key. When omitted, the map uses the
+        OpenStreetMap basemap so unauthenticated CARTO watermark tiles are
+        never displayed.
     """
 
     # --------------------------------
@@ -397,9 +405,45 @@ def create_geoai_map():
     geoai_map = folium.Map(
         location=[6.5, -9.5],
         zoom_start=7,
-        tiles="CartoDB positron",
+        tiles=None,
         control_scale=True
     )
+
+    carto_basemap_api_key = str(
+        carto_basemap_api_key or ""
+    ).strip()
+
+    if carto_basemap_api_key:
+        encoded_carto_key = quote(
+            carto_basemap_api_key,
+            safe="",
+        )
+        folium.TileLayer(
+            tiles=(
+                "https://{s}.basemaps.cartocdn.com/"
+                "light_all/{z}/{x}/{y}{r}.png"
+                f"?key={encoded_carto_key}"
+            ),
+            attr=(
+                '&copy; <a href="https://www.openstreetmap.org/copyright">'
+                'OpenStreetMap</a> contributors &copy; '
+                '<a href="https://carto.com/attributions">CARTO</a>'
+            ),
+            name="CARTO Positron",
+            subdomains="abcd",
+            max_zoom=20,
+            overlay=False,
+            control=True,
+            show=True,
+        ).add_to(geoai_map)
+    else:
+        folium.TileLayer(
+            tiles="OpenStreetMap",
+            name="OpenStreetMap",
+            overlay=False,
+            control=True,
+            show=True,
+        ).add_to(geoai_map)
 
     # --------------------------------
     # Risk-classification colours
