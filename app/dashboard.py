@@ -1632,7 +1632,7 @@ st.info(
 # Interactive GeoAI Map
 # --------------------------------
 map_slot.subheader(
-    "Operational GeoAI Spatial Intelligence Map",
+    "GeoAI Decision-Support Spatial Intelligence Map",
     help=(
         "This map combines model-based relative-risk information with GeoAI-derived "
         "Getis-Ord Gi* hotspot intelligence. The hotspot layer shows significant "
