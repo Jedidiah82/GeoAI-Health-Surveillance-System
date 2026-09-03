@@ -93,11 +93,27 @@ st.markdown(
     }
     /* Give the four primary analytical KPIs stronger visual priority without
        enlarging every metric used elsewhere in the dashboard. */
+    .st-key-primary_kpis [data-testid="stMetricLabel"] {
+        align-items: flex-start !important;
+        min-height: 2.9rem;
+        overflow: visible !important;
+        white-space: normal !important;
+    }
+    .st-key-primary_kpis [data-testid="stMetricLabel"] [data-testid="stMarkdownContainer"] {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: none !important;
+        overflow: visible !important;
+    }
     .st-key-primary_kpis [data-testid="stMetricLabel"] p {
         color: #1f2937 !important;
-        font-size: clamp(1.05rem, 1.25vw, 1.18rem) !important;
+        font-size: clamp(0.92rem, 1.05vw, 1.05rem) !important;
         font-weight: 750 !important;
         line-height: 1.25 !important;
+        max-width: none !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        white-space: normal !important;
     }
     .st-key-primary_kpis [data-testid="stMetricValue"],
     .st-key-primary_kpis [data-testid="stMetricValue"] > div,
@@ -108,7 +124,7 @@ st.markdown(
         line-height: 1.15 !important;
     }
     .st-key-primary_kpis [data-testid="stColumn"] {
-        min-height: 7.7rem;
+        min-height: 8.8rem;
         background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(238,242,255,0.82));
         border: 1px solid #dfe5f3;
         border-top: 3px solid var(--geoai-indigo);
@@ -177,7 +193,7 @@ st.markdown(
             padding-inline: 0.5rem;
         }
         .st-key-primary_kpis [data-testid="stMetricLabel"] p {
-            font-size: 1rem !important;
+            font-size: 0.95rem !important;
         }
         .st-key-primary_kpis [data-testid="stColumn"] {
             min-height: auto;
