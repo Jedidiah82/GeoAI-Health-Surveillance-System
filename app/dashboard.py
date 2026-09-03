@@ -36,7 +36,7 @@ def _optional_setting(name):
     return str(value or "").strip()
 
 st.set_page_config(
-    page_title="GeoAI Surveillance Dashboard",
+    page_title="Liberia GeoAI Outbreak Watch",
     layout="wide"
 )
 
@@ -154,70 +154,159 @@ st.markdown(
     .st-key-primary_kpis [data-testid="stCaptionContainer"] p {
         color: #475569 !important;
     }
-    .governance-event-row {
+    .geoai-hero {
         display: flex;
-        justify-content: flex-end;
-        margin: 0.3rem 0 0.75rem;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+        padding: 0.35rem 0.1rem 0.85rem;
+        border-bottom: 1px solid #d7e2e8;
     }
-    .governance-event-badge {
+    .geoai-brand-lockup {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        min-width: 0;
+    }
+    .geoai-brand-mark {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        width: 2.75rem;
+        height: 2.75rem;
+        border: 1px solid rgba(15, 118, 110, 0.4);
+        border-radius: 50%;
+        background: linear-gradient(145deg, #ecfdf5, #eef2ff);
+        box-shadow: 0 5px 15px rgba(15, 118, 110, 0.09);
+    }
+    .geoai-brand-mark svg {
+        width: 1.75rem;
+        height: 1.75rem;
+    }
+    .geoai-title-block h1 {
+        margin: 0 !important;
+        color: #162238 !important;
+        font-size: clamp(1.65rem, 2.4vw, 2.1rem) !important;
+        font-weight: 760 !important;
+        line-height: 1.08 !important;
+        letter-spacing: -0.025em;
+    }
+    .geoai-subtitle {
+        margin: 0.28rem 0 0;
+        color: #617084;
+        font-size: 0.88rem;
+        line-height: 1.4;
+    }
+    .geoai-prototype-badge {
+        display: inline-block;
+        margin-left: 0.25rem;
+        padding: 0.08rem 0.42rem;
+        border: 1px solid #c7d2fe;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #3730a3;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        vertical-align: 0.08rem;
+    }
+    .geoai-updated {
+        flex: 0 0 auto;
+        text-align: right;
+        white-space: nowrap;
+    }
+    .geoai-updated-label {
+        display: block;
+        color: #7a8798;
+        font-size: 0.66rem;
+        font-weight: 700;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+    }
+    .geoai-updated time {
+        color: #435166;
+        font-size: 0.82rem;
+        font-variant-numeric: tabular-nums;
+    }
+    .geoai-status-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin: 0.75rem 0 1rem;
+        padding: 0.62rem 0.9rem;
+        border: 1px solid #dce5eb;
+        border-radius: 0.72rem;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 5px 16px rgba(30, 41, 59, 0.055);
+    }
+    .geoai-status-items {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0;
+    }
+    .geoai-status-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.42rem;
+        padding: 0 0.85rem;
+        border-right: 1px solid #dce5eb;
+        color: #415064;
+        font-size: 0.82rem;
+        line-height: 1.25;
+    }
+    .geoai-status-item:first-child {
+        padding-left: 0;
+    }
+    .geoai-status-item:last-child {
+        border-right: 0;
+    }
+    .geoai-status-dot {
+        width: 0.48rem;
+        height: 0.48rem;
+        border-radius: 50%;
+        background: #16a34a;
+        box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+    }
+    .governance-event-link {
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
-        padding: 0.3rem 0.7rem;
-        border: 1px solid #cbd5e1;
-        border-radius: 999px;
-        background: rgba(248, 250, 252, 0.92);
-        color: #334155 !important;
+        flex: 0 0 auto;
+        color: #0f5f59 !important;
         font-size: 0.82rem;
-        font-weight: 650;
+        font-weight: 700;
         line-height: 1.2;
-        text-decoration: none !important;
+        text-decoration: underline;
+        text-decoration-color: rgba(15, 95, 89, 0.35);
+        text-underline-offset: 0.16rem;
     }
-    .governance-event-badge:hover {
-        border-color: #818cf8;
-        background: #eef2ff;
-        color: #312e81 !important;
+    .governance-event-link:hover {
+        color: #0f766e !important;
+        text-decoration-color: currentColor;
     }
     .map-reset-spacer {
         height: 1.55rem;
     }
-    /* Streamlit scrolls the main content inside nested containers, where CSS
-       sticky positioning is not dependable. A restrained fixed header keeps
-       the dashboard identity visible without occupying the full viewport. */
-    .st-key-sticky_dashboard_header {
-        position: fixed;
-        top: 3.2rem;
-        left: 0;
-        right: 0;
-        width: 100%;
-        z-index: 999;
-        background: linear-gradient(105deg, rgba(49,46,129,0.985), rgba(37,99,235,0.975) 56%, rgba(15,118,110,0.975));
-        backdrop-filter: blur(8px);
-        border: 0;
-        border-bottom: 1px solid rgba(255,255,255,0.3);
-        border-radius: 0;
-        box-shadow: 0 6px 22px rgba(30, 41, 59, 0.18);
-        padding: 0.45rem 1rem 0.5rem;
-        text-align: center;
-    }
-    .st-key-sticky_dashboard_header h1 {
-        color: #ffffff !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        font-size: clamp(1.75rem, 2.25vw, 2.15rem) !important;
-        line-height: 1.2 !important;
-        text-align: center !important;
-    }
-    .sticky-header-spacer { height: 0.65rem; }
-    .st-key-dashboard_metadata [data-testid="stCaptionContainer"],
-    .st-key-dashboard_metadata [data-testid="stCaptionContainer"] p {
-        color: #3f4b5e !important;
-    }
     @media (max-width: 768px) {
-        .st-key-sticky_dashboard_header {
-            top: 3rem;
-            width: 100%;
-            padding-inline: 0.5rem;
+        .geoai-hero {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+        .geoai-updated {
+            padding-left: 3.6rem;
+            text-align: left;
+        }
+        .geoai-status-strip {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+        .geoai-status-item {
+            padding: 0 0.55rem;
         }
         .st-key-primary_kpis [data-testid="stMetricLabel"] p {
             font-size: 0.95rem !important;
@@ -266,25 +355,38 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-with st.container(key="sticky_dashboard_header"):
-    st.title("GeoAI Surveillance Dashboard Prototype")
-st.markdown('<div class="sticky-header-spacer"></div>', unsafe_allow_html=True)
-with st.container(key="dashboard_metadata"):
-    st.caption("Privacy-preserving district-level COVID-19 outbreak risk monitoring system")
-    st.caption(
-        f"Last Updated: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC"
-    )
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.success("System Status: Operational")
-
-with col2:
-    st.info("API Gateway: Healthy")
-
-with col3:
-    st.warning("Audit Logging: Active")
+dashboard_updated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+st.markdown(
+    f"""
+    <header class="geoai-hero" aria-labelledby="geoai-dashboard-title">
+        <div class="geoai-brand-lockup">
+            <div class="geoai-brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 9.5 16 6l8 7-4 10-10-2Z" stroke="#0f766e" stroke-width="1.5"/>
+                    <path d="m8 9.5 12 13M16 6l-6 15m14-8-14 8" stroke="#64748b" stroke-width="1"/>
+                    <circle cx="8" cy="9.5" r="2.2" fill="#2563eb"/>
+                    <circle cx="16" cy="6" r="2.2" fill="#0f766e"/>
+                    <circle cx="24" cy="13" r="2.2" fill="#4338ca"/>
+                    <circle cx="20" cy="23" r="2.2" fill="#0f766e"/>
+                    <circle cx="10" cy="21" r="2.2" fill="#2563eb"/>
+                </svg>
+            </div>
+            <div class="geoai-title-block">
+                <h1 id="geoai-dashboard-title">Liberia GeoAI Outbreak Watch</h1>
+                <p class="geoai-subtitle">
+                    Privacy-preserving district-level COVID-19 outbreak-risk surveillance · Republic of Liberia
+                    <span class="geoai-prototype-badge">Research prototype</span>
+                </p>
+            </div>
+        </div>
+        <div class="geoai-updated">
+            <span class="geoai-updated-label">Last updated</span>
+            <time datetime="{dashboard_updated_at}Z">{dashboard_updated_at} UTC</time>
+        </div>
+    </header>
+    """,
+    unsafe_allow_html=True,
+)
 
 def _first_existing_path(paths):
     """Return the first existing path from a collection of Path objects."""
@@ -622,6 +724,34 @@ latest_data_period = (
 )
 hotspot_analysis_period = "Latest Available Spatial Analysis"
 
+governance_event_noun = "event" if governance_events == 1 else "events"
+st.markdown(
+    f"""
+    <div class="geoai-status-strip" role="status" aria-label="Operational status">
+        <div class="geoai-status-items">
+            <span class="geoai-status-item">
+                <span class="geoai-status-dot" aria-hidden="true"></span>
+                System operational
+            </span>
+            <span class="geoai-status-item">
+                <span class="geoai-status-dot" aria-hidden="true"></span>
+                API gateway healthy
+            </span>
+            <span class="geoai-status-item">
+                <span class="geoai-status-dot" aria-hidden="true"></span>
+                Audit logging active
+            </span>
+        </div>
+        <a class="governance-event-link"
+           href="#governance-and-privacy-controls"
+           title="Open governance and privacy controls">
+            {governance_events} governance {governance_event_noun} logged →
+        </a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 primary_kpi_container = st.container(key="primary_kpis")
 m1, m2, m3, m4 = primary_kpi_container.columns(4)
 
@@ -667,21 +797,6 @@ with m4:
         latest_data_period,
         help="Most recent surveillance period represented in the dashboard.",
     )
-
-governance_event_noun = "event" if governance_events == 1 else "events"
-st.markdown(
-    f"""
-    <div class="governance-event-row">
-        <a class="governance-event-badge"
-           href="#governance-and-privacy-controls"
-           title="Open governance and privacy controls">
-            Audit trail · {governance_events} {governance_event_noun}
-        </a>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
 
 def _focus_hotspot(source_key="hotspot_drilldown"):
     """Synchronise the dashboard selectors and map with a hotspot choice."""
