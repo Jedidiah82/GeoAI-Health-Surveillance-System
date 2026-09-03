@@ -1786,17 +1786,17 @@ if not hotspot_map_gdf.empty:
         name="GeoAI-Derived Gi* Hotspots",
         show=map_filter != "Top-ranked districts only",
         style_function=lambda feature: {
-            "fillColor": "#C0392B",
-            "color": "#C62828",
-            "weight": 4,
-            "fillOpacity": 0.10,
-            "dashArray": "14, 9",
+            "fillColor": "#F44336",
+            "color": "#B91C1C",
+            "weight": 1,
+            "fillOpacity": 0.44,
+            "dashArray": "4, 3",
             "lineCap": "butt",
         },
         highlight_function=lambda feature: {
-            "color": "#000000",
-            "weight": 5,
-            "fillOpacity": 0.22,
+            "color": "#7F1D1D",
+            "weight": 1.5,
+            "fillOpacity": 0.58,
         },
         tooltip=folium.GeoJsonTooltip(
             fields=[
@@ -2025,7 +2025,7 @@ legend_template = f"""
     border-radius: 5px;
 ">
 {risk_legend_items}
-<span style="border:3px dashed #C62828;width:18px;height:10px;display:inline-block;margin-right:8px;"></span>GeoAI-derived Gi* hotspots<br>
+<span style="background:#F44336;border:1px dashed #B91C1C;width:18px;height:10px;display:inline-block;margin-right:8px;"></span>GeoAI-derived Gi* hotspots<br>
 <span style="border:3px solid #1565C0;width:15px;height:10px;display:inline-block;margin-right:8px;"></span>Top-ranked districts<br>
 <span style="background:linear-gradient(135deg,#2ECC71 0 50%,#F39C12 50%);border:3px solid #4C1D95;box-shadow:0 0 0 2px #FFFFFF,0 0 0 3px #4C1D95;width:16px;height:10px;display:inline-block;margin:3px 10px 3px 3px;vertical-align:middle;"></span>Selected district
 </div>
