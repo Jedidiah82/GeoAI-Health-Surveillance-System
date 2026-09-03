@@ -178,6 +178,9 @@ st.markdown(
         background: #eef2ff;
         color: #312e81 !important;
     }
+    .map-reset-spacer {
+        height: 1.55rem;
+    }
     /* Streamlit scrolls the main content inside nested containers, where CSS
        sticky positioning is not dependable. A restrained fixed header keeps
        the dashboard identity visible without occupying the full viewport. */
@@ -221,6 +224,9 @@ st.markdown(
         }
         .st-key-primary_kpis [data-testid="stColumn"] {
             min-height: auto;
+        }
+        .map-reset-spacer {
+            height: 0;
         }
     }
     [data-testid="stDataFrame"] { font-size: 0.88rem; }
@@ -599,6 +605,8 @@ avg_risk_score = latest_df["Predicted_Probability"].mean()
 avg_risk_score_pct = avg_risk_score * 100
 
 detected_hotspot_count = len(detected_hotspots_gdf)
+district_total_count = latest_df["adm2_pcode"].astype(str).nunique()
+top_ranked_count = min(10, district_total_count)
 
 try:
     audit_log = pd.read_csv(LOGS_DIR / "audit_log.csv")
@@ -620,10 +628,11 @@ m1, m2, m3, m4 = primary_kpi_container.columns(4)
 with m1:
     st.metric(
         "Top Ranked Districts",
-        10,
+        f"{top_ranked_count} of {district_total_count}",
         help=(
             "The ten districts with the highest latest predicted outbreak "
-            "probabilities, ranked for operational prioritisation."
+            "probabilities, ranked for operational prioritisation, out of all "
+            "districts in the latest national dataset."
         ),
     )
 
@@ -640,10 +649,15 @@ with m2:
 with m3:
     st.metric(
         "GeoAI-Derived Spatial Hotspots",
-        detected_hotspot_count if not hotspot_gdf.empty else "N/A",
+        (
+            f"{detected_hotspot_count} of {district_total_count}"
+            if not hotspot_gdf.empty
+            else "N/A"
+        ),
         help=(
             "Districts identified by Getis-Ord Gi* as significant spatial "
-            "concentrations in the model-derived risk surface at 95% confidence."
+            "concentrations in the model-derived risk surface at 95% confidence, "
+            "out of all districts in the latest national dataset."
         ),
     )
 
@@ -1388,19 +1402,36 @@ map_slot.subheader(
     ),
 )
 
-map_filter = map_slot.radio(
-    "Spatial focus",
-    [
-        "All districts",
-        "GeoAI-derived hotspots",
-        "Top-ranked districts only",
-    ],
-    horizontal=True,
-    help=(
-        "Controls the analytical outline displayed over the underlying "
-        "relative-risk classification map."
-    ),
-)
+map_focus_col, map_reset_col = map_slot.columns([5, 1])
+with map_focus_col:
+    map_filter = st.radio(
+        "Spatial focus",
+        [
+            "All districts",
+            "GeoAI-derived hotspots",
+            "Top-ranked districts only",
+        ],
+        horizontal=True,
+        help=(
+            "Controls the analytical outline displayed over the underlying "
+            "relative-risk classification map."
+        ),
+    )
+with map_reset_col:
+    st.markdown(
+        '<div class="map-reset-spacer"></div>',
+        unsafe_allow_html=True,
+    )
+    st.button(
+        "Reset view",
+        key="reset_spatial_map_view",
+        on_click=_clear_map_focus,
+        help=(
+            "Return the map to the national extent while retaining the selected "
+            "district outline."
+        ),
+        width="stretch",
+    )
 
 map_focus_district = st.session_state.get("map_focus_district")
 map_focus_county = st.session_state.get("map_focus_county")
@@ -1749,7 +1780,7 @@ legend_template = f"""
 legend = MacroElement()
 legend._template = Template(legend_template)
 geoai_map.get_root().add_child(legend)
-folium.LayerControl(collapsed=False).add_to(geoai_map)
+folium.LayerControl(collapsed=True).add_to(geoai_map)
 
 with map_slot:
     st_folium(
