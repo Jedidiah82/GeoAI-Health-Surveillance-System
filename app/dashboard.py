@@ -733,7 +733,7 @@ st.markdown(
         <div class="geoai-status-items">
             <span class="geoai-status-item">
                 <span class="geoai-status-dot" aria-hidden="true"></span>
-                System operational
+                Prototype services available
             </span>
             <span class="geoai-status-item">
                 <span class="geoai-status-dot" aria-hidden="true"></span>
