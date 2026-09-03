@@ -96,6 +96,7 @@ st.markdown(
     .st-key-primary_kpis [data-testid="stMetricLabel"] {
         align-items: flex-start !important;
         min-height: 2.9rem;
+        padding-right: 2.35rem;
         overflow: visible !important;
         white-space: normal !important;
     }
@@ -119,18 +120,62 @@ st.markdown(
     .st-key-primary_kpis [data-testid="stMetricValue"] > div,
     .st-key-primary_kpis [data-testid="stMetricValue"] p {
         color: #0f172a !important;
-        font-size: clamp(1.9rem, 2.4vw, 2.25rem) !important;
-        font-weight: 450 !important;
+        font-size: clamp(2rem, 2.55vw, 2.35rem) !important;
+        font-weight: 610 !important;
         line-height: 1.15 !important;
     }
     .st-key-primary_kpis [data-testid="stColumn"] {
+        --kpi-accent: #0f766e;
+        --kpi-chip: rgba(15, 118, 110, 0.11);
+        position: relative;
         min-height: 8.8rem;
-        background: linear-gradient(145deg, rgba(255,255,255,0.99), rgba(248,250,252,0.92));
+        overflow: hidden;
+        background: #f5fbfa;
         border: 1px solid #dce3ea;
-        border-top: 3px solid #64748b;
+        border-left: 3px solid var(--kpi-accent);
         border-radius: 0.8rem;
-        box-shadow: 0 8px 24px rgba(30, 41, 59, 0.065);
+        box-shadow: 0 7px 18px rgba(30, 41, 59, 0.07);
         padding: 0.95rem 1rem 0.8rem;
+    }
+    .st-key-primary_kpis [data-testid="stColumn"]::after {
+        content: "▥";
+        position: absolute;
+        top: 0.78rem;
+        right: 0.75rem;
+        display: grid;
+        place-items: center;
+        width: 1.8rem;
+        height: 1.8rem;
+        border-radius: 0.55rem;
+        background: var(--kpi-chip);
+        color: var(--kpi-accent);
+        font-size: 0.86rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(2) {
+        --kpi-accent: #b66a05;
+        --kpi-chip: rgba(217, 119, 6, 0.13);
+        background: #fffbf2;
+    }
+    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(2)::after {
+        content: "%";
+    }
+    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(3) {
+        --kpi-accent: #d45147;
+        --kpi-chip: rgba(220, 38, 38, 0.11);
+        background: #fff7f5;
+    }
+    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(3)::after {
+        content: "●";
+    }
+    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(4) {
+        --kpi-accent: #64748b;
+        --kpi-chip: rgba(100, 116, 139, 0.12);
+        background: #f8fafc;
+    }
+    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(4)::after {
+        content: "◷";
     }
     .st-key-primary_kpis [data-testid="stMetric"] {
         gap: 0.3rem;
@@ -141,6 +186,9 @@ st.markdown(
     }
     .st-key-primary_kpis [data-testid="stCaptionContainer"] p {
         color: #475569 !important;
+        font-size: 0.78rem !important;
+        font-weight: 560 !important;
+        line-height: 1.3 !important;
     }
     .geoai-hero {
         display: flex;
@@ -767,6 +815,7 @@ with m1:
             "districts in the latest national dataset."
         ),
     )
+    st.caption("probability-ranked districts")
 
 with m2:
     st.metric(
@@ -777,6 +826,7 @@ with m2:
             "records, displayed as a percentage."
         ),
     )
+    st.caption("mean model probability")
 
 with m3:
     st.metric(
@@ -792,6 +842,7 @@ with m3:
             "out of all districts in the latest national dataset."
         ),
     )
+    st.caption("Gi* spatial hotspots")
 
 with m4:
     st.metric(
@@ -799,6 +850,7 @@ with m4:
         latest_data_period,
         help="Most recent surveillance period represented in the dashboard.",
     )
+    st.caption("latest analytical period")
 
 def _focus_hotspot(source_key="hotspot_drilldown"):
     """Synchronise the dashboard selectors and map with a hotspot choice."""
