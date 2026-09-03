@@ -200,15 +200,6 @@ st.markdown(
         }
     }
     [data-testid="stDataFrame"] { font-size: 0.88rem; }
-    .geoai-method-note {
-        border-left: 4px solid var(--geoai-teal);
-        background: linear-gradient(100deg, #eef2ff 0%, #eff6ff 52%, #ecfdf5 100%);
-        color: #1e3a5f;
-        padding: 0.8rem 1rem;
-        border-radius: 0.6rem;
-        margin: 0.65rem 0 1rem;
-        box-shadow: 0 5px 16px rgba(30, 64, 175, 0.055);
-    }
     .selected-intelligence {
         border-left: 5px solid #4c1d95;
         background: #f5f3ff;
@@ -726,9 +717,13 @@ if hotspot_names:
         f"GeoAI-Derived Spatial Hotspots — {hotspot_analysis_period}",
         help=(
             "Method: XGBoost predicted outbreak probabilities → Getis-Ord Gi* "
-            "spatial analysis → GeoAI-derived hotspot intelligence. These districts "
-            "are significant spatial concentrations in model-derived risk and are "
-            "distinct from probability ranking and incidence-based hotspots."
+            "spatial analysis → GeoAI-derived hotspot intelligence. Predicted "
+            "probability estimates an individual district-month; relative risk groups "
+            "the latest probabilities into national tertiles; GeoAI-derived Gi* "
+            "hotspots identify significant spatial concentrations in model-derived "
+            "risk; and traditional Gi* hotspots use observed cumulative incidence. "
+            "Interpret these complementary outputs together, not as interchangeable "
+            "classifications."
         ),
     )
     visible_hotspot_names = hotspot_names[:5]
@@ -807,32 +802,6 @@ else:
         "No statistically significant GeoAI-derived Gi* hotspot districts "
         "are available in the current spatial-intelligence output."
     )
-
-st.markdown(
-    """
-    <div class="geoai-method-note">
-    <strong>Different analytical signals:</strong> Predicted probability ranks
-    individual districts; GeoAI-derived Gi* hotspots identify significant spatial
-    concentrations in model-derived risk; traditional Gi* hotspots identify
-    clustering in observed epidemiological incidence. These outputs are
-    complementary and may identify different districts.
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-with st.expander("Learn how these analytical outputs differ"):
-    st.markdown("""
-    - **Predicted probability** is the XGBoost estimate for an individual district-month.
-    - **Relative risk** groups the latest district probabilities into national tertiles.
-    - **GeoAI-derived Gi* hotspots** identify statistically significant spatial
-      concentrations in the model-derived outbreak-risk surface.
-    - **Traditional Gi* hotspots** are calculated separately from observed
-      epidemiological incidence.
-
-    The outputs answer different questions and should be interpreted together,
-    not treated as interchangeable classifications.
-    """)
 
 # Render the primary decision-support regions in a map-first sequence. Data
 # preparation continues below, but content written into these containers appears
@@ -1340,19 +1309,19 @@ st.info(
 # --------------------------------
 # Interactive GeoAI Map
 # --------------------------------
-map_slot.subheader("Operational GeoAI Spatial Intelligence Map")
-
-with map_slot.expander("About this map"):
-    st.markdown("""
-    This map combines model-based relative-risk information with GeoAI-derived
-    Getis-Ord Gi* hotspot intelligence. The hotspot layer represents significant
-    spatial concentrations in the model-derived outbreak-risk surface; it is not
-    the traditional Gi* analysis of observed cumulative incidence. Use the
-    spatial-focus control to show all districts, GeoAI-derived hotspots, or the
-    ten highest predicted-probability districts. The district selected in the
-    sidebar is always highlighted; selecting it directly or through the hotspot
-    workflow also zooms the map to its boundary.
-    """)
+map_slot.subheader(
+    "Operational GeoAI Spatial Intelligence Map",
+    help=(
+        "This map combines model-based relative-risk information with GeoAI-derived "
+        "Getis-Ord Gi* hotspot intelligence. The hotspot layer shows significant "
+        "spatial concentrations in model-derived outbreak risk, not the traditional "
+        "Gi* analysis of observed cumulative incidence. Use Spatial focus to show "
+        "all districts, GeoAI-derived hotspots, or the ten highest predicted-"
+        "probability districts. The district selected in the sidebar is always "
+        "highlighted; selecting it directly or through the hotspot workflow also "
+        "zooms the map to its boundary."
+    ),
+)
 
 map_filter = map_slot.radio(
     "Spatial focus",
