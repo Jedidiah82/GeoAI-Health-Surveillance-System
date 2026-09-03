@@ -287,6 +287,13 @@ st.markdown(
         color: #0f766e !important;
         text-decoration-color: currentColor;
     }
+    .st-key-hotspot_quick_actions {
+        margin-bottom: 0.2rem;
+    }
+    .st-key-hotspot_quick_actions [data-testid="stPopover"] > button {
+        width: 100%;
+        white-space: nowrap;
+    }
     .map-reset-spacer {
         height: 1.55rem;
     }
@@ -307,6 +314,13 @@ st.markdown(
         }
         .geoai-status-item {
             padding: 0 0.55rem;
+        }
+        .st-key-hotspot_quick_actions [data-testid="stHorizontalBlock"] {
+            flex-direction: column;
+        }
+        .st-key-hotspot_quick_actions [data-testid="stColumn"] {
+            flex: 1 1 100% !important;
+            width: 100% !important;
         }
         .st-key-primary_kpis [data-testid="stMetricLabel"] p {
             font-size: 0.95rem !important;
@@ -909,31 +923,6 @@ if hotspot_names:
         ),
     )
     visible_hotspot_labels = hotspot_labels[:5]
-    if hasattr(st, "pills"):
-        st.pills(
-            "Quick-focus hotspot districts",
-            visible_hotspot_labels,
-            format_func=lambda label: label.split(" — ", 1)[0],
-            key="hotspot_quick_focus",
-            help="Select a district chip to focus the dashboard and map.",
-            on_change=_focus_hotspot_chip,
-            label_visibility="collapsed",
-        )
-    else:
-        hotspot_chip_columns = st.columns(len(visible_hotspot_labels))
-        for chip_column, hotspot_label in zip(
-            hotspot_chip_columns,
-            visible_hotspot_labels,
-        ):
-            with chip_column:
-                st.button(
-                    hotspot_label.split(" — ", 1)[0],
-                    key=f"hotspot_chip::{hotspot_label}",
-                    on_click=_focus_hotspot_label,
-                    args=(hotspot_label,),
-                    width="stretch",
-                )
-
     hotspot_summary_table = detected_hotspots_gdf[
         [
             "adm2_name",
@@ -959,38 +948,75 @@ if hotspot_names:
         hotspot_summary_table["p-value"].round(4)
     )
 
-    hotspot_details_panel = (
-        st.popover(f"View all {detected_hotspot_count} hotspot districts")
-        if hasattr(st, "popover")
-        else st.expander(
-            f"View all {detected_hotspot_count} hotspot districts"
+    with st.container(key="hotspot_quick_actions"):
+        quick_focus_col, hotspot_directory_col = st.columns(
+            [6, 2.1],
+            gap="small",
+            vertical_alignment="center",
         )
-    )
-    with hotspot_details_panel:
-        st.dataframe(
-            hotspot_summary_table,
-            hide_index=True,
-            width="stretch",
-        )
-        st.selectbox(
-            "Select a hotspot district",
-            hotspot_labels,
-            key="hotspot_drilldown",
-            on_change=_focus_drilldown_hotspot,
-        )
-        hotspot_action_col, national_view_col = st.columns(2)
-        with hotspot_action_col:
-            st.button(
-                "Focus dashboard and map",
-                on_click=_focus_drilldown_hotspot,
-                width="stretch",
+
+        with quick_focus_col:
+            if hasattr(st, "pills"):
+                st.pills(
+                    "Quick-focus hotspot districts",
+                    visible_hotspot_labels,
+                    format_func=lambda label: label.split(" — ", 1)[0],
+                    key="hotspot_quick_focus",
+                    help="Select a district chip to focus the dashboard and map.",
+                    on_change=_focus_hotspot_chip,
+                    label_visibility="collapsed",
+                )
+            else:
+                hotspot_chip_columns = st.columns(len(visible_hotspot_labels))
+                for chip_column, hotspot_label in zip(
+                    hotspot_chip_columns,
+                    visible_hotspot_labels,
+                ):
+                    with chip_column:
+                        st.button(
+                            hotspot_label.split(" — ", 1)[0],
+                            key=f"hotspot_chip::{hotspot_label}",
+                            on_click=_focus_hotspot_label,
+                            args=(hotspot_label,),
+                            width="stretch",
+                        )
+
+        with hotspot_directory_col:
+            hotspot_details_panel = (
+                st.popover(
+                    f"View all {detected_hotspot_count} hotspot districts",
+                    width="stretch",
+                )
+                if hasattr(st, "popover")
+                else st.expander(
+                    f"View all {detected_hotspot_count} hotspot districts"
+                )
             )
-        with national_view_col:
-            st.button(
-                "Return map to national view",
-                on_click=_clear_map_focus,
-                width="stretch",
-            )
+            with hotspot_details_panel:
+                st.dataframe(
+                    hotspot_summary_table,
+                    hide_index=True,
+                    width="stretch",
+                )
+                st.selectbox(
+                    "Select a hotspot district",
+                    hotspot_labels,
+                    key="hotspot_drilldown",
+                    on_change=_focus_drilldown_hotspot,
+                )
+                hotspot_action_col, national_view_col = st.columns(2)
+                with hotspot_action_col:
+                    st.button(
+                        "Focus dashboard and map",
+                        on_click=_focus_drilldown_hotspot,
+                        width="stretch",
+                    )
+                with national_view_col:
+                    st.button(
+                        "Return map to national view",
+                        on_click=_clear_map_focus,
+                        width="stretch",
+                    )
 else:
     st.warning(
         "No statistically significant GeoAI-derived Gi* hotspot districts "
