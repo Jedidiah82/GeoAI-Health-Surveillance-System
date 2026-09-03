@@ -125,24 +125,12 @@ st.markdown(
     }
     .st-key-primary_kpis [data-testid="stColumn"] {
         min-height: 8.8rem;
-        background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(238,242,255,0.82));
-        border: 1px solid #dfe5f3;
-        border-top: 3px solid var(--geoai-indigo);
+        background: linear-gradient(145deg, rgba(255,255,255,0.99), rgba(248,250,252,0.92));
+        border: 1px solid #dce3ea;
+        border-top: 3px solid #64748b;
         border-radius: 0.8rem;
         box-shadow: 0 8px 24px rgba(30, 41, 59, 0.065);
         padding: 0.95rem 1rem 0.8rem;
-    }
-    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(2) {
-        border-top-color: #2563eb;
-        background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(239,246,255,0.84));
-    }
-    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(3) {
-        border-top-color: #0f766e;
-        background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(240,253,250,0.86));
-    }
-    .st-key-primary_kpis [data-testid="stColumn"]:nth-child(4) {
-        border-top-color: #7c3aed;
-        background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(245,243,255,0.84));
     }
     .st-key-primary_kpis [data-testid="stMetric"] {
         gap: 0.3rem;
@@ -1035,22 +1023,19 @@ ranking_slot = st.container()
 
 st.sidebar.header("District Exploration")
 
-st.sidebar.markdown("""
-
-### Dashboard Navigation
-
-Use this dashboard to explore:
-
-* District-level predicted outbreak probabilities and relative-risk categories
-* Spatial hotspot intelligence
-* Explainable AI insights
-* Model performance summaries
-* Environmental and epidemiological trends
-* Governance and privacy controls
-
-Use the two workflows below to explore locations or focus directly on a
-statistically significant GeoAI hotspot.
-""")
+with st.sidebar.expander("About this dashboard", expanded=False):
+    st.markdown(
+        "Use this dashboard to explore:\n\n"
+        "* District-level predicted outbreak probabilities and relative-risk "
+        "categories\n"
+        "* Spatial hotspot intelligence\n"
+        "* Explainable AI insights\n"
+        "* Model performance summaries\n"
+        "* Environmental and epidemiological trends\n"
+        "* Governance and privacy controls\n\n"
+        "Use the two workflows below to explore locations or focus directly "
+        "on a statistically significant GeoAI hotspot."
+    )
 
 sidebar_hotspot_options = [
     "— Select a GeoAI-derived hotspot —",
@@ -1616,16 +1601,27 @@ focus_risk = (
     focus_prediction.iloc[0]["Relative_Risk_Level"]
     if not focus_prediction.empty else "Unavailable"
 )
-focus_spatial_status = (
-    str(focus_spatial.iloc[0]["Spatial_Hotspot_Status"])
-    if not focus_spatial.empty else "Spatial result unavailable"
-)
+if focus_spatial.empty:
+    focus_spatial_summary = "GeoAI Gi* status: Spatial result unavailable"
+else:
+    focus_hotspot_class = str(focus_spatial.iloc[0]["Hotspot_Class"])
+    focus_confidence = str(focus_spatial.iloc[0]["Confidence"])
+    if focus_hotspot_class == "Hotspot":
+        focus_spatial_summary = (
+            f"🔴 GeoAI Gi* hotspot — {focus_confidence} confidence"
+        )
+    elif focus_hotspot_class == "Coldspot":
+        focus_spatial_summary = (
+            f"🔵 GeoAI Gi* coldspot — {focus_confidence} confidence"
+        )
+    else:
+        focus_spatial_summary = "⚪ GeoAI Gi* status: Not significant"
 map_slot.markdown(
     f"""
     <div class="selected-intelligence">
     Selected district: {selected_map_district} — {selected_map_county}<br>
-    {focus_spatial_status} · Predicted Probability
-    {focus_probability} · {focus_risk}
+    {focus_spatial_summary} · Predicted outbreak probability: {focus_probability}
+    · Relative risk: {focus_risk}
     </div>
     """,
     unsafe_allow_html=True,
