@@ -154,6 +154,30 @@ st.markdown(
     .st-key-primary_kpis [data-testid="stCaptionContainer"] p {
         color: #475569 !important;
     }
+    .governance-event-row {
+        display: flex;
+        justify-content: flex-end;
+        margin: 0.3rem 0 0.75rem;
+    }
+    .governance-event-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.7rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        background: rgba(248, 250, 252, 0.92);
+        color: #334155 !important;
+        font-size: 0.82rem;
+        font-weight: 650;
+        line-height: 1.2;
+        text-decoration: none !important;
+    }
+    .governance-event-badge:hover {
+        border-color: #818cf8;
+        background: #eef2ff;
+        color: #312e81 !important;
+    }
     /* Streamlit scrolls the main content inside nested containers, where CSS
        sticky positioning is not dependable. A restrained fixed header keeps
        the dashboard identity visible without occupying the full viewport. */
@@ -630,9 +654,18 @@ with m4:
         help="Most recent surveillance period represented in the dashboard.",
     )
 
-st.caption(
-    f"System Operational · API Healthy · Audit Active · "
-    f"{governance_events} governance event(s) logged"
+governance_event_noun = "event" if governance_events == 1 else "events"
+st.markdown(
+    f"""
+    <div class="governance-event-row">
+        <a class="governance-event-badge"
+           href="#governance-and-privacy-controls"
+           title="Open governance and privacy controls">
+            Audit trail · {governance_events} {governance_event_noun}
+        </a>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
 
@@ -660,6 +693,10 @@ def _focus_hotspot(source_key="hotspot_drilldown"):
     st.session_state["pending_district_selector"] = selected["adm2_name"]
     st.session_state["map_focus_district"] = selected["adm2_name"]
     st.session_state["map_focus_county"] = selected["adm1_name"]
+    quick_focus_labels = globals().get("visible_hotspot_labels", [])
+    st.session_state["hotspot_quick_focus"] = (
+        hotspot_label if hotspot_label in quick_focus_labels else None
+    )
 
 
 def _focus_sidebar_hotspot():
@@ -672,11 +709,26 @@ def _focus_drilldown_hotspot():
     _focus_hotspot("hotspot_drilldown")
 
 
+def _focus_hotspot_label(hotspot_label):
+    """Focus the dashboard and map from a known hotspot label."""
+    st.session_state["hotspot_quick_focus"] = hotspot_label
+    st.session_state["hotspot_drilldown"] = hotspot_label
+    _focus_hotspot("hotspot_drilldown")
+
+
+def _focus_hotspot_chip():
+    """Focus the dashboard and map from a visible hotspot chip."""
+    hotspot_label = st.session_state.get("hotspot_quick_focus")
+    if hotspot_label:
+        _focus_hotspot_label(hotspot_label)
+
+
 def _clear_map_focus():
     """Return the spatial-intelligence map to its national extent."""
     st.session_state.pop("map_focus_district", None)
     st.session_state.pop("map_focus_county", None)
     st.session_state.pop("active_hotspot_label", None)
+    st.session_state["hotspot_quick_focus"] = None
 
 
 def _focus_selected_location():
@@ -689,6 +741,7 @@ def _focus_selected_location():
     st.session_state["map_focus_district"] = district
     st.session_state["map_focus_county"] = county
     st.session_state.pop("active_hotspot_label", None)
+    st.session_state["hotspot_quick_focus"] = None
 
 
 hotspot_names = (
@@ -726,19 +779,31 @@ if hotspot_names:
             "classifications."
         ),
     )
-    visible_hotspot_names = hotspot_names[:5]
-    remaining_hotspots = max(
-        0,
-        detected_hotspot_count - len(visible_hotspot_names),
-    )
-    hotspot_summary = " · ".join(
-        f"**{district_name}**"
-        for district_name in visible_hotspot_names
-    )
-    if remaining_hotspots:
-        hotspot_summary += f" · **+{remaining_hotspots} more**"
-
-    st.markdown(hotspot_summary)
+    visible_hotspot_labels = hotspot_labels[:5]
+    if hasattr(st, "pills"):
+        st.pills(
+            "Quick-focus hotspot districts",
+            visible_hotspot_labels,
+            format_func=lambda label: label.split(" — ", 1)[0],
+            key="hotspot_quick_focus",
+            help="Select a district chip to focus the dashboard and map.",
+            on_change=_focus_hotspot_chip,
+            label_visibility="collapsed",
+        )
+    else:
+        hotspot_chip_columns = st.columns(len(visible_hotspot_labels))
+        for chip_column, hotspot_label in zip(
+            hotspot_chip_columns,
+            visible_hotspot_labels,
+        ):
+            with chip_column:
+                st.button(
+                    hotspot_label.split(" — ", 1)[0],
+                    key=f"hotspot_chip::{hotspot_label}",
+                    on_click=_focus_hotspot_label,
+                    args=(hotspot_label,),
+                    width="stretch",
+                )
 
     hotspot_summary_table = detected_hotspots_gdf[
         [
@@ -1663,7 +1728,7 @@ legend_template = f"""
 {{% macro html(this, kwargs) %}}
 <div style="
     position: absolute;
-    bottom: 40px;
+    bottom: 70px;
     left: 40px;
     width: 225px;
     background-color: white;
@@ -1676,7 +1741,7 @@ legend_template = f"""
 {risk_legend_items}
 <span style="border:3px dashed #C62828;width:18px;height:10px;display:inline-block;margin-right:8px;"></span>GeoAI-derived Gi* hotspots<br>
 <span style="border:3px solid #1565C0;width:15px;height:10px;display:inline-block;margin-right:8px;"></span>Top-ranked districts<br>
-<span style="border:4px solid #4C1D95;background:white;width:15px;height:10px;display:inline-block;margin-right:8px;"></span>Selected district
+<span style="background:linear-gradient(135deg,#2ECC71 0 50%,#F39C12 50%);border:3px solid #4C1D95;box-shadow:0 0 0 2px #FFFFFF,0 0 0 3px #4C1D95;width:16px;height:10px;display:inline-block;margin:3px 10px 3px 3px;vertical-align:middle;"></span>Selected district
 </div>
 {{% endmacro %}}
 """
