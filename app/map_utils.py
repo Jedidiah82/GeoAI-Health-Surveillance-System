@@ -433,7 +433,7 @@ def create_geoai_map(carto_basemap_api_key=None):
             subdomains="abcd",
             max_zoom=20,
             overlay=False,
-            control=True,
+            control=False,
             show=True,
         ).add_to(geoai_map)
     else:
@@ -441,7 +441,7 @@ def create_geoai_map(carto_basemap_api_key=None):
             tiles="OpenStreetMap",
             name="OpenStreetMap",
             overlay=False,
-            control=True,
+            control=False,
             show=True,
         ).add_to(geoai_map)
 
@@ -594,7 +594,7 @@ def create_geoai_map(carto_basemap_api_key=None):
     # --------------------------------
 
     folium.LayerControl(
-        collapsed=False
+        collapsed=True
     ).add_to(geoai_map)
 
     return geoai_map
