@@ -984,7 +984,8 @@ if hotspot_names:
         with hotspot_directory_col:
             hotspot_details_panel = (
                 st.popover(
-                    f"View all {detected_hotspot_count} hotspot districts",
+                    f"View all {detected_hotspot_count}",
+                    help="Open the full GeoAI-derived hotspot district directory.",
                     width="stretch",
                 )
                 if hasattr(st, "popover")
