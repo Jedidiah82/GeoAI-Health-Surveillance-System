@@ -528,6 +528,43 @@ def _normalise_text(value):
     return " ".join(str(value).strip().casefold().split())
 
 
+def _harmonise_district_names(frame, spatial_reference):
+    """Use district codes to align modelling labels with spatial labels."""
+    required_columns = {"adm2_pcode", "adm2_name"}
+    if (
+        frame.empty
+        or spatial_reference.empty
+        or not required_columns.issubset(frame.columns)
+        or not required_columns.issubset(spatial_reference.columns)
+    ):
+        return frame
+
+    reference = spatial_reference[["adm2_pcode", "adm2_name"]].copy()
+    reference["_district_code"] = (
+        reference["adm2_pcode"].astype(str).str.strip()
+    )
+    reference["_canonical_name"] = (
+        reference["adm2_name"].astype(str).str.strip()
+    )
+    reference = reference[
+        reference["_district_code"].ne("")
+        & reference["_canonical_name"].ne("")
+    ].drop_duplicates("_district_code")
+    canonical_names = reference.set_index("_district_code")[
+        "_canonical_name"
+    ]
+
+    harmonised = frame.copy()
+    district_codes = harmonised["adm2_pcode"].astype(str).str.strip()
+    matched_names = district_codes.map(canonical_names)
+    matched_rows = (
+        matched_names.notna()
+        & matched_names.astype(str).str.strip().ne("")
+    )
+    harmonised.loc[matched_rows, "adm2_name"] = matched_names[matched_rows]
+    return harmonised
+
+
 def _classify_hotspot(zscore, pvalue):
     """Classify a district using the study's 95% Getis-Ord Gi* threshold."""
     zscore = pd.to_numeric(zscore, errors="coerce")
@@ -703,6 +740,8 @@ def load_hotspot_intelligence(method_version):
 df = load_data()
 latest_df = load_latest_predictions()
 hotspot_gdf = load_hotspot_intelligence("geoai_gi_95_v1")
+df = _harmonise_district_names(df, hotspot_gdf)
+latest_df = _harmonise_district_names(latest_df, hotspot_gdf)
 if hotspot_gdf.empty:
     detected_hotspots_gdf = gpd.GeoDataFrame()
 else:
@@ -865,6 +904,17 @@ def _focus_hotspot(source_key="hotspot_drilldown"):
         return
 
     selected = match.iloc[0]
+    selected_pcode = str(selected.get("adm2_pcode", "")).strip()
+    prediction_match = latest_df[
+        latest_df["adm2_pcode"].astype(str).str.strip() == selected_pcode
+    ]
+    if prediction_match.empty:
+        selected_district = selected["adm2_name"]
+        selected_county = selected["adm1_name"]
+    else:
+        selected_district = prediction_match.iloc[0]["adm2_name"]
+        selected_county = prediction_match.iloc[0]["adm1_name"]
+
     st.session_state["active_hotspot_label"] = hotspot_label
     counterpart_key = (
         "sidebar_hotspot_focus"
@@ -872,10 +922,10 @@ def _focus_hotspot(source_key="hotspot_drilldown"):
         else "hotspot_drilldown"
     )
     st.session_state[counterpart_key] = hotspot_label
-    st.session_state["pending_county_selector"] = selected["adm1_name"]
-    st.session_state["pending_district_selector"] = selected["adm2_name"]
-    st.session_state["map_focus_district"] = selected["adm2_name"]
-    st.session_state["map_focus_county"] = selected["adm1_name"]
+    st.session_state["pending_county_selector"] = selected_county
+    st.session_state["pending_district_selector"] = selected_district
+    st.session_state["map_focus_district"] = selected_district
+    st.session_state["map_focus_county"] = selected_county
     quick_focus_labels = globals().get("visible_hotspot_labels", [])
     st.session_state["hotspot_quick_focus"] = (
         hotspot_label if hotspot_label in quick_focus_labels else None
