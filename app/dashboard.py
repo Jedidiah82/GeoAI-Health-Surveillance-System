@@ -1601,6 +1601,7 @@ focus_risk = (
     focus_prediction.iloc[0]["Relative_Risk_Level"]
     if not focus_prediction.empty else "Unavailable"
 )
+focus_risk_display = str(focus_risk).replace(" Relative Risk", "")
 if focus_spatial.empty:
     focus_spatial_summary = "GeoAI Gi* status: Spatial result unavailable"
 else:
@@ -1621,7 +1622,7 @@ map_slot.markdown(
     <div class="selected-intelligence">
     Selected district: {selected_map_district} — {selected_map_county}<br>
     {focus_spatial_summary} · Predicted outbreak probability: {focus_probability}
-    · Relative risk: {focus_risk}
+    · Relative risk: {focus_risk_display}
     </div>
     """,
     unsafe_allow_html=True,
