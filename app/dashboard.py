@@ -891,6 +891,9 @@ with m4:
     )
     st.caption("latest analytical period")
 
+HOTSPOT_SELECTOR_PLACEHOLDER = "— Select a GeoAI-derived hotspot —"
+
+
 def _focus_hotspot(source_key="hotspot_drilldown"):
     """Synchronise the dashboard selectors and map with a hotspot choice."""
     hotspot_label = st.session_state.get(source_key)
@@ -962,6 +965,14 @@ def _clear_map_focus():
     st.session_state.pop("map_focus_county", None)
     st.session_state.pop("active_hotspot_label", None)
     st.session_state["hotspot_quick_focus"] = None
+
+
+def _clear_hotspot_focus():
+    """Clear the hotspot workflow before its widgets are instantiated."""
+    _clear_map_focus()
+    st.session_state["sidebar_hotspot_focus"] = (
+        HOTSPOT_SELECTOR_PLACEHOLDER
+    )
 
 
 def _focus_selected_location():
@@ -1140,7 +1151,7 @@ with st.sidebar.expander("About this dashboard", expanded=False):
     )
 
 sidebar_hotspot_options = [
-    "— Select a GeoAI-derived hotspot —",
+    HOTSPOT_SELECTOR_PLACEHOLDER,
     *hotspot_labels,
 ]
 st.sidebar.markdown("### Focus on GeoAI Hotspot")
@@ -1155,8 +1166,11 @@ st.sidebar.selectbox(
     ),
 )
 
-if st.sidebar.button("Clear hotspot focus", width="stretch"):
-    _clear_map_focus()
+st.sidebar.button(
+    "Clear hotspot focus",
+    width="stretch",
+    on_click=_clear_hotspot_focus,
+)
 
 st.sidebar.markdown("### Explore by Location")
 
